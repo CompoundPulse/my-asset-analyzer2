@@ -47,7 +47,18 @@ const InvestmentAnalysis = ({ symbol, marketData, historicalData }) => {
         }
 
         console.log('Fetched financial data:', data);
-        setFinancialData(data);
+        // Transform flat structure to expected nested structure
+const transformedData = data._raw ? data : {
+  _raw: {
+    financialData: data,
+    keyStats: data,
+    price: {
+      regularMarketPrice: data.currentPrice,
+      marketCap: data.marketCap
+    }
+  }
+};
+setFinancialData(transformedData);
         setError(null);
       } catch (error) {
         console.error('Error fetching fundamentals:', error);

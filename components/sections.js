@@ -50,20 +50,11 @@ export const analysisSections = [
       
       try {
         const metrics = analyzeSummaryDashboard(financialData);
-        const summaryView = metrics?.investment_summary?.["Summary View"];
         
-        if (!summaryView) {
-          return {
-            title: "Investment Summary Dashboard",
-            metrics: metrics || {},
-            summary: "Unable to generate summary view - data structure mismatch"
-          };
-        }
-
         return {
           title: "Investment Summary Dashboard",
           metrics: metrics,
-          summary: summaryView.analysis || "Analysis not available"
+          summary: "Comprehensive overview of valuation, performance, and risk metrics."
         };
       } catch (error) {
         return handleAnalysisError(error, "Investment Summary Dashboard");

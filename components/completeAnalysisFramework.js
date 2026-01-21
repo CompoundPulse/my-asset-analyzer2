@@ -425,7 +425,7 @@ export const analyzeMarketSentiment = (data) => {
   return [
     {
       indicator: "Analyst Consensus",
-      value: fd.recommendationKey.toUpperCase(),
+      value: (fd.recommendationKey || 'N/A').toUpperCase(),
       analysis: `${fd.numberOfAnalystOpinions} analysts provide ratings with mean score ${
         fd.recommendationMean.toFixed(2)
       } vs. sector avg 2.5. Rating distribution: ${
@@ -460,7 +460,7 @@ export const analyzeMarketSentiment = (data) => {
     {
       indicator: "Sentiment Score",
       value: `${sentimentScore.score}/10`,
-      analysis: `${sentimentScore.detail}. Analyst consensus ${fd.recommendationKey.toUpperCase()} with ${
+      analysis: `${sentimentScore.detail}. Analyst consensus ${(fd.recommendationKey || 'N/A').toUpperCase()} with ${
         formatPercent((fd.targetMedianPrice - fd.currentPrice) / fd.currentPrice)
       } target upside and ${formatPercent(ks.heldPercentInstitutions)} institutional ownership indicates ${
         sentimentScore.score > 7 ? "strong positive" : sentimentScore.score > 5 ? "moderately positive" : "neutral"
@@ -727,7 +727,7 @@ export const analyzeMonitoring = (data) => {
     riskMonitoring: [
       {
         metric: "Risk Indicators",
-        value: fd.recommendationKey.toUpperCase(),
+        value: (fd.recommendationKey || 'N/A').toUpperCase(),
         analysis: `${fd.numberOfAnalystOpinions} analysts rate stock ${
           fd.recommendationKey
         } with mean score ${fd.recommendationMean.toFixed(2)} vs. peer avg 2.5. Short interest ${
@@ -927,7 +927,7 @@ export const analyzeSummaryDashboard = (financialData) => {
       },
       {
         metric: "Analyst View",
-        value: fd.recommendationKey.toUpperCase(),
+        value: (fd.recommendationKey || 'N/A').toUpperCase(),
         analysis: `${fd.numberOfAnalystOpinions} analysts coverage with median target $${fd.targetMedianPrice}`,
         impact: fd.recommendationMean < 2.5 ? "Positive" : "Neutral"
       }

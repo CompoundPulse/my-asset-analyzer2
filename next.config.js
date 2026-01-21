@@ -10,20 +10,19 @@ const nextConfig = {
     unoptimized: true
   },
   webpack: (config) => {
-    config.resolve = {
-      ...config.resolve,
-      fallback: {
-        fs: false,
-        net: false,
-        tls: false,
-        "node:buffer": false,
-        "node:util": false,
-        "node:stream": false,
-        "node:events": false
-      },
-      alias: {
-        '@': '.'
-      }
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+      "node:buffer": false,
+      "node:util": false,
+      "node:stream": false,
+      "node:events": false
+    };
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': '.'
     };
     return config;
   }

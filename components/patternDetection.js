@@ -1077,6 +1077,3 @@ export const ensureCorrectDateRange = (data, timeframeInDays) => {
     prices: indexedPrices
   };
 };
-
-// Export all needed functions
-export { detectChartPatterns, ensureCorrectDateRange, getTrendLineValueAtIndex };

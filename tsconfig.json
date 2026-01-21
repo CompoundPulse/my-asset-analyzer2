@@ -38,11 +38,11 @@
     "components/FREDtest.jsx",
     "components/**/*.js",
     "components/**/*.jsx",
-    "app/**/*.js",
-    "app/**/*.jsx",
-    "app/**/*.ts",
-    "app/**/*.tsx"
-, "app/pattern-analysis/page.js"  ],
+    "app /**/*.js",
+    "app /**/*.jsx",
+    "app /**/*.ts",
+    "app /**/*.tsx"
+, "app /pattern-analysis/page.js"  ],
   "exclude": [
     "node_modules"
   ]
