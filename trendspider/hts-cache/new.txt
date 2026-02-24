@@ -1,0 +1,3 @@
+date	size'/'remotesize	flags(request:Update,Range state:File response:Modified,Chunked,gZipped)	statuscode	status ('servermsg')	MIME	Etag|Date	URL	localfile	(from URL)
+12:39:34	187/187	---MCZ	200	added ('OK')	text/plain	etag:W/%22699446f8-180%22	https://www.trendspider.com/robots.txt		(from )
+12:39:35	272/272	---M--	301	error ('Moved%20Permanently')	text/html	date:Sat,%2021%20Feb%202026%2011:39:34%20GMT	https://www.trendspider.com/	./trendspider/www.trendspider.com/index.html	(from )

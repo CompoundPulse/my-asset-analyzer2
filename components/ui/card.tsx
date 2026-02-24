@@ -6,10 +6,15 @@ interface CardTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {}
 interface CardContentProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className, ...props }, ref) => (
+  ({ className, style, ...props }, ref) => (
     <div
       ref={ref}
-      className={`rounded-lg border bg-card text-card-foreground shadow-sm ${className || ''}`}
+      className={`rounded overflow-hidden ${className || ''}`}
+      style={{
+        backgroundColor: '#1E222D',
+        border: '1px solid #2A2E39',
+        ...style,
+      }}
       {...props}
     />
   )
@@ -17,10 +22,14 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
 Card.displayName = "Card"
 
 const CardHeader = React.forwardRef<HTMLDivElement, CardHeaderProps>(
-  ({ className, ...props }, ref) => (
+  ({ className, style, ...props }, ref) => (
     <div
       ref={ref}
-      className={`flex flex-col space-y-1.5 p-6 ${className || ''}`}
+      className={`flex flex-col space-y-1.5 px-4 py-3 ${className || ''}`}
+      style={{
+        borderBottom: '1px solid #2A2E39',
+        ...style,
+      }}
       {...props}
     />
   )
@@ -28,22 +37,31 @@ const CardHeader = React.forwardRef<HTMLDivElement, CardHeaderProps>(
 CardHeader.displayName = "CardHeader"
 
 const CardTitle = React.forwardRef<HTMLParagraphElement, CardTitleProps>(
-  ({ className, ...props }, ref) => (
+  ({ className, style, children, ...props }, ref) => (
     <h3
       ref={ref}
-      className={`relative text-2xl font-bold ${className || ''}`}
+      className={`text-sm font-semibold tracking-wide uppercase ${className || ''}`}
+      style={{
+        color: '#FFFFFF',
+        letterSpacing: '0.06em',
+        ...style,
+      }}
+      {...props}
     >
-      <div className="absolute -inset-1 bg-gradient-to-r from-blue-400/20 via-cyan-400/20 to-purple-400/20 rounded-lg blur-xl opacity-75"></div>
-      <span className="relative bg-gradient-to-r from-blue-200 via-cyan-100 to-purple-200 bg-clip-text text-transparent 
-                      drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" {...props} />
+      {children}
     </h3>
   )
 )
 CardTitle.displayName = "CardTitle"
 
 const CardContent = React.forwardRef<HTMLDivElement, CardContentProps>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={`p-6 pt-0 ${className || ''}`} {...props} />
+  ({ className, style, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={`p-4 ${className || ''}`}
+      style={style}
+      {...props}
+    />
   )
 )
 CardContent.displayName = "CardContent"

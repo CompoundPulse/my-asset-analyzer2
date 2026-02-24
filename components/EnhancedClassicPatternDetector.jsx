@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+// recharts replaced by TVPatternChart
+import TVPatternChart from './TVPatternChart';
 import { 
   handlePatternFetch, 
   handleShortPatternFetch, 
@@ -1098,87 +1099,44 @@ useEffect(() => {
   handlePatternFetch(symbol, {
     setLoading: (state) => setIsLoading(prev => ({ ...prev, long: state })),
     setError,
-    setHistoricalData: setLongTermData
+    setHistoricalData: (data) => {
+      if (data && data.prices && data.prices.length > 0) {
+        const adjusted = ensureCorrectDateRange(data, 200);
+        const patternsFound = detectChartPatterns(adjusted.prices, "long");
+        setLongTermData(adjusted);
+        setPatterns(prev => ({ ...prev, long: patternsFound }));
+      } else { setLongTermData(data); }
+    }
   });
 
   // Fetch 40-day data
   handleShortPatternFetch(symbol, {
     setLoading: (state) => setIsLoading(prev => ({ ...prev, short: state })),
     setError,
-    setHistoricalData: setShortTermData
+    setHistoricalData: (data) => {
+      if (data && data.prices && data.prices.length > 0) {
+        const adjusted = ensureCorrectDateRange(data, 40);
+        const patternsFound = detectChartPatterns(adjusted.prices, "medium");
+        setShortTermData(adjusted);
+        setPatterns(prev => ({ ...prev, short: patternsFound }));
+      } else { setShortTermData(data); }
+    }
   });
-  
+
   // Fetch 10-day data
   handleVeryShortPatternFetch(symbol, {
     setLoading: (state) => setIsLoading(prev => ({ ...prev, veryShort: state })),
     setError,
-    setHistoricalData: setVeryShortTermData
+    setHistoricalData: (data) => {
+      if (data && data.prices && data.prices.length > 0) {
+        const adjusted = ensureCorrectDateRange(data, 10);
+        const patternsFound = detectChartPatterns(adjusted.prices, "short");
+        setVeryShortTermData(adjusted);
+        setPatterns(prev => ({ ...prev, veryShort: patternsFound }));
+      } else { setVeryShortTermData(data); }
+    }
   });
 }, [symbol]);
-
-// Dedicated effects for pattern detection to avoid blocking the UI
-useEffect(() => {
-  if (longTermData && longTermData.prices && longTermData.prices.length > 0) {
-    console.log("Processing long-term data:", longTermData.prices.length, "data points");
-    try {
-      // Apply date range filtering to ensure exactly 200 days
-      const timeframeAdjustedData = ensureCorrectDateRange(longTermData, 200);
-      console.log("Adjusted long-term data:", timeframeAdjustedData.prices.length, "data points");
-      
-      const patternsFound = detectChartPatterns(timeframeAdjustedData.prices, 'long');
-      setLongTermData(timeframeAdjustedData); // Update with filtered data
-      setPatterns(prev => ({
-        ...prev,
-        long: patternsFound
-      }));
-      console.log(`LONG-TERM: Found ${patternsFound.length} patterns`);
-    } catch (err) {
-      console.error("Error detecting long-term patterns:", err);
-    }
-  }
-}, [longTermData]);
-
-useEffect(() => {
-  if (shortTermData && shortTermData.prices && shortTermData.prices.length > 0) {
-    console.log("Processing medium-term data:", shortTermData.prices.length, "data points");
-    try {
-      // Apply date range filtering to ensure exactly 40 days
-      const timeframeAdjustedData = ensureCorrectDateRange(shortTermData, 40);
-      console.log("Adjusted medium-term data:", timeframeAdjustedData.prices.length, "data points");
-      
-      const patternsFound = detectChartPatterns(timeframeAdjustedData.prices, 'medium');
-      setShortTermData(timeframeAdjustedData); // Update with filtered data
-      setPatterns(prev => ({
-        ...prev,
-        short: patternsFound
-      }));
-      console.log(`MEDIUM-TERM: Found ${patternsFound.length} patterns`);
-    } catch (err) {
-      console.error("Error detecting medium-term patterns:", err);
-    }
-  }
-}, [shortTermData]);
-
-useEffect(() => {
-  if (veryShortTermData && veryShortTermData.prices && veryShortTermData.prices.length > 0) {
-    console.log("Processing short-term data:", veryShortTermData.prices.length, "data points");
-    try {
-      // Apply date range filtering to ensure exactly 10 days
-      const timeframeAdjustedData = ensureCorrectDateRange(veryShortTermData, 10);
-      console.log("Adjusted short-term data:", timeframeAdjustedData.prices.length, "data points");
-      
-      const patternsFound = detectChartPatterns(timeframeAdjustedData.prices, 'short');
-      setVeryShortTermData(timeframeAdjustedData); // Update with filtered data
-      setPatterns(prev => ({
-        ...prev,
-        veryShort: patternsFound
-      }));
-      console.log(`SHORT-TERM: Found ${patternsFound.length} patterns`);
-    } catch (err) {
-      console.error("Error detecting short-term patterns:", err);
-    }
-  }
-}, [veryShortTermData]);
 
   // Helper function to get trendline value at specific index
   const getTrendLineValueAtIndex = (line, index) => {
@@ -1625,1055 +1583,155 @@ const CustomTooltip = ({ active, payload }) => {
 };
   
     return (
-      <div className="bg-gradient-to-br from-black via-slate-800 to-gray-900 rounded-lg p-4 mb-6 border-2 border-amber-500/30 shadow-lg shadow-amber-400/10">
-        <h3 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-orange-400 mb-4">{title} - {symbol}</h3>
-        <div className="h-96">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart 
-              data={stretchedData} 
-              margin={{ top: 5, right: 30, left: 5, bottom: title.includes("200-Day") ? 40 : 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,170,60,0.1)" />
-              <XAxis 
-                dataKey="xPosition" 
-                stroke="rgba(255,170,60,0.7)"
-                tick={{ 
-                  fill: 'rgba(255,170,60,0.7)',
-                  angle: title.includes("200-Day") ? -45 : 0,
-                  textAnchor: title.includes("200-Day") ? 'end' : 'middle',
-                  dy: title.includes("200-Day") ? 10 : 0
-                }}
-                height={title.includes("200-Day") ? 60 : 30}
-                tickFormatter={(value) => {
-                  // Find the closest data point to this position
-                  const index = Math.round(value * (realDataLength - 1) / 100);
-                  if (index >= 0 && index < realDataLength) {
-                    const date = new Date(chartData[index].date);
-                    return `${date.getMonth() + 1}/${date.getDate()}`;
+      <>
+        <TVPatternChart
+          data={chartData}
+          title={title}
+          symbol={symbol}
+          height={320}
+          markers={
+            hasPatterns ? chartPatterns.flatMap((pattern) => {
+              const color = pattern.color || '#2962FF';
+              const pts = [];
+              const { points, type } = pattern;
+              if (type?.includes('head_and_shoulders')) {
+                if (points.head)          pts.push({ time: points.head.date,          label: 'H',   color, position: 'above' });
+                if (points.leftShoulder)  pts.push({ time: points.leftShoulder.date,  label: 'LS',  color, position: 'above' });
+                if (points.rightShoulder) pts.push({ time: points.rightShoulder.date, label: 'RS',  color, position: 'above' });
+                if (points.leftTrough)    pts.push({ time: points.leftTrough.date,    label: 'LT',  color: '#F5C518', position: 'below' });
+                if (points.rightTrough)   pts.push({ time: points.rightTrough.date,   label: 'RT',  color: '#F5C518', position: 'below' });
+              } else if (type === 'double_top') {
+                if (points.firstPeak)  pts.push({ time: points.firstPeak.date,  label: 'P1', color, position: 'above' });
+                if (points.secondPeak) pts.push({ time: points.secondPeak.date, label: 'P2', color, position: 'above' });
+                if (points.trough)     pts.push({ time: points.trough.date,     label: 'T',  color: '#F5C518', position: 'below' });
+              } else if (type === 'double_bottom') {
+                if (points.firstTrough)  pts.push({ time: points.firstTrough.date,  label: 'T1', color, position: 'below' });
+                if (points.secondTrough) pts.push({ time: points.secondTrough.date, label: 'T2', color, position: 'below' });
+                if (points.peak)         pts.push({ time: points.peak.date,         label: 'P',  color: '#F5C518', position: 'above' });
+              } else if (type?.includes('triangle') || type?.includes('wedge')) {
+                if (points.apex) pts.push({ time: points.apex.date, label: 'Apex', color, position: 'above' });
+              } else if (type?.includes('pennant')) {
+                if (points.mastStart) pts.push({ time: points.mastStart.date, label: 'Start', color, position: 'below' });
+                if (points.mastEnd)   pts.push({ time: points.mastEnd.date,   label: 'End',   color, position: 'above' });
+              }
+              return pts;
+            }) : []
+          }
+          slopeLines={
+            hasPatterns ? chartPatterns.flatMap((pattern) => {
+              const color = pattern.color || '#2962FF';
+              const { type, points, lines } = pattern;
+              const out = [];
+
+              // Wedge / Triangle: sloped resistance + support bounds
+              if (lines?.resistance && lines?.support && (type?.includes('wedge') || type?.includes('triangle') || type?.includes('rectangle'))) {
+                const { highs = [], lows = [] } = points;
+                const allPts = [...highs, ...lows];
+                if (allPts.length >= 2) {
+                  const startIdx = Math.min(...allPts.map(p => p.index));
+                  const endIdx   = Math.max(...allPts.map(p => p.index));
+                  const sd = chartData[startIdx]?.date;
+                  const ed = chartData[endIdx]?.date;
+                  if (sd && ed) {
+                    out.push({ points: [
+                      { date: sd, value: lines.resistance.slope * startIdx + lines.resistance.intercept },
+                      { date: ed, value: lines.resistance.slope * endIdx   + lines.resistance.intercept },
+                    ], color, width: 1.5, dashed: true });
+                    out.push({ points: [
+                      { date: sd, value: lines.support.slope * startIdx + lines.support.intercept },
+                      { date: ed, value: lines.support.slope * endIdx   + lines.support.intercept },
+                    ], color, width: 1.5, dashed: true });
                   }
-                  return "";
-                }}
-                // Set evenly spaced ticks across the chart
-                ticks={[0, 20, 40, 60, 80, 100]}
-                type="number"
-                domain={[0, 100]}
-                padding={{ left: 0, right: 0 }}
-              />
-              <YAxis 
-                stroke="rgba(255,170,60,0.7)"
-                tick={{ fill: 'rgba(255,170,60,0.7)' }}
-                tickFormatter={(value) => `$${value.toFixed(2)}`}
-                domain={[dataMin - padding, dataMax + padding]}
-                padding={{ top: 10, bottom: 0 }}
-              />
-              
-              {/* Use custom tooltip with enhanced stability */}
-              <Tooltip 
-  content={<CustomTooltip />}
-  isAnimationActive={false}
-  animationDuration={0}
-  animationEasing="linear"
-  cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1 }}
-/>
-              
-              {/* Basic price line with no dot customization */}
-              <Line 
-  type="monotone" 
-  dataKey="value" 
-  stroke="#ffa94d" 
-  dot={false}
-  activeDot={{ 
-    stroke: '#ffffff', 
-    strokeWidth: 2, 
-    r: 6, 
-    fill: '#ffa94d',
-    onClick: () => {}, 
-    onMouseOver: () => {} 
-  }}
-  strokeWidth={2}
-  name="Price"
-/>
-              
-              {/* Add pattern markers as additional lines with customized shapes */}
-              {hasPatterns && chartPatterns.map((pattern, patternIdx) => {
-                // Track key points with their descriptions
-                const keyPointsWithInfo = [];
-                
-                // Add only essential pattern points based on pattern type
-                if (pattern.type.includes('head_and_shoulders')) {
-                  if (pattern.points.head) 
-                    keyPointsWithInfo.push({...pattern.points.head, pointType: "Head"});
-                  if (pattern.points.rightShoulder) 
-                    keyPointsWithInfo.push({...pattern.points.rightShoulder, pointType: "Right Shoulder"});
-                  if (pattern.points.leftShoulder) 
-                    keyPointsWithInfo.push({...pattern.points.leftShoulder, pointType: "Left Shoulder"});
-                } else if (pattern.type.includes('double')) {
-                  if (pattern.points.firstPeak) 
-                    keyPointsWithInfo.push({...pattern.points.firstPeak, pointType: "First Peak"});
-                  if (pattern.points.secondPeak) 
-                    keyPointsWithInfo.push({...pattern.points.secondPeak, pointType: "Second Peak"});
-                  if (pattern.points.firstTrough) 
-                    keyPointsWithInfo.push({...pattern.points.firstTrough, pointType: "First Trough"});
-                  if (pattern.points.secondTrough) 
-                    keyPointsWithInfo.push({...pattern.points.secondTrough, pointType: "Second Trough"});
-                  if (pattern.points.trough) 
-                    keyPointsWithInfo.push({...pattern.points.trough, pointType: "Trough"});
-                  if (pattern.points.peak) 
-                    keyPointsWithInfo.push({...pattern.points.peak, pointType: "Peak"});
-                } else if (pattern.type.includes('triangle')) {
-                  // Just add apex if available
-                  if (pattern.points.apex)
-                    keyPointsWithInfo.push({...pattern.points.apex, pointType: "Apex"});
-                } else if (pattern.type.includes('wedge')) {
-                  // Just add apex if available
-                  if (pattern.points.apex)
-                    keyPointsWithInfo.push({...pattern.points.apex, pointType: "Apex"});
-                } else if (pattern.type.includes('rectangle')) {
-                  // No specific points
-                } else if (pattern.type.includes('pennant')) {
-                  if (pattern.points.mastStart)
-                    keyPointsWithInfo.push({...pattern.points.mastStart, pointType: "Mast Start"});
-                  if (pattern.points.mastEnd)
-                    keyPointsWithInfo.push({...pattern.points.mastEnd, pointType: "Mast End"});
-                  if (pattern.points.apex)
-                    keyPointsWithInfo.push({...pattern.points.apex, pointType: "Apex"});
                 }
-                
-                // Only create a pattern line if we have key points
-                if (keyPointsWithInfo.length === 0) return null;
-                
-                // Create pattern marker data that matches the format needed for a Line
-                const patternData = stretchedData.map(dataPoint => {
-                  // Use original date to find matching key points
-                  const keyPoint = keyPointsWithInfo.find(kp => kp.date === dataPoint.date);
-                  
-                  // Return data point with pattern info if it's a key point
-                  return {
-                    xPosition: dataPoint.xPosition,
-                    date: dataPoint.date,
-                    value: dataPoint.value,
-                    patternMarker: keyPoint ? dataPoint.value : null,
-                    // Add pattern information for key points
-                    ...(keyPoint && {
-                      pointType: keyPoint.pointType,
-                      patternName: pattern.name,
-                      patternDirection: pattern.direction,
-                      patternColor: pattern.color
-                    })
-                  };
-                });
-                
-                return (
-                  <Line
-                    key={`pattern-${patternIdx}`}
-                    type="monotone"
-                    dataKey="patternMarker"
-                    data={patternData}
-                    stroke="transparent"
-                    dot={(props) => {
-                      if (!props.payload.patternMarker) return null;
-                      
-                      return (
-                        <circle 
-                          cx={props.cx} 
-                          cy={props.cy} 
-                          r={6} 
-                          fill={pattern.color}
-                          stroke="#fff" 
-                          strokeWidth={1.5}
-                        />
-                      );
-                    }}
-                    activeDot={(props) => {
-                      if (!props.payload.patternMarker) return null;
-                      
-                      return (
-                        <g>
-                          <circle 
-                            cx={props.cx} 
-                            cy={props.cy} 
-                            r={7} 
-                            fill={props.payload.patternColor}
-                            stroke="#fff" 
-                            strokeWidth={2}
-                          />
-                          <circle 
-                            cx={props.cx} 
-                            cy={props.cy} 
-                            r={10} 
-                            fill="none"
-                            stroke={props.payload.patternColor} 
-                            strokeWidth={1}
-                            opacity={0.8}
-                          />
-                        </g>
-                      );
-                    }}
-                    isAnimationActive={false}
-                    name={pattern.name}
-                  />
-                );
-              })}
-              
-              {/* Add pattern-specific lines and reference lines */}
-{allTargetLines.map((target, tIdx) => {
-  // Get the pattern type and index
-  const patternIndex = target.patternIdx !== undefined ? target.patternIdx : -1;
-  const pattern = chartPatterns[patternIndex];
-  const patternType = pattern?.type || "";
-  
-  // For wedge and triangle patterns, draw sloped lines with touch points
-  if ((patternType.includes('wedge') || patternType.includes('triangle')) && pattern?.lines) {
-    const { resistance, support } = pattern.lines;
-    
-    // Get the actual high and low points that formed the pattern
-    const highs = pattern.points.highs || [];
-    const lows = pattern.points.lows || [];
-    
-    // Find the earliest and latest indices among all pattern points
-    const allPoints = [...highs, ...lows];
-    
-    if (allPoints.length === 0) {
-      // Fallback to reference line if no points
-      return (
-        <ReferenceLine
-          key={`target-${tIdx}`}
-          y={target.value}
-          stroke={target.color}
-          strokeDasharray="5 5"
-          strokeWidth={1.5}
-          label={{
-            value: target.label,
-            position: 'right',
-            fill: target.color,
-            fontSize: 10,
-            fontWeight: 'bold'
-          }}
-        />
-      );
-    }
-    
-    // Calculate wedge boundaries
-    const startIdx = Math.min(...allPoints.map(p => p.index));
-    const endIdx = Math.max(...allPoints.map(p => p.index));
-    
-    // Convert to chart positions
-    const startPos = (startIdx / (chartData.length - 1)) * 100;
-    const endPos = (endIdx / (chartData.length - 1)) * 100;
-    
-    const resistanceStart = resistance.slope * startIdx + resistance.intercept;
-    const resistanceEnd = resistance.slope * endIdx + resistance.intercept;
-    
-    const supportStart = support.slope * startIdx + support.intercept;
-    const supportEnd = support.slope * endIdx + support.intercept;
-    
-    const resistancePoints = [
-      { xPosition: startPos, value: resistanceStart },
-      { xPosition: endPos, value: resistanceEnd }
-    ];
-    
-    const supportPoints = [
-      { xPosition: startPos, value: supportStart },
-      { xPosition: endPos, value: supportEnd }
-    ];
-    
-    // Convert actual detection points to chart positions for visualization
-    const highPointsData = highs.map(high => {
-      const xPosition = (high.index / (chartData.length - 1)) * 100;
-      return {
-        xPosition,
-        value: high.value,
-        date: high.date,
-        pointType: "Resistance Touch",
-        patternName: pattern.name,
-        patternDirection: pattern.direction
-      };
-    });
-    
-    const lowPointsData = lows.map(low => {
-      const xPosition = (low.index / (chartData.length - 1)) * 100;
-      return {
-        xPosition,
-        value: low.value,
-        date: low.date,
-        pointType: "Support Touch",
-        patternName: pattern.name,
-        patternDirection: pattern.direction
-      };
-    });
-    
-    return (
-      <React.Fragment key={`wedge-${tIdx}`}>
-        {/* Wedge lines */}
-        <Line
-          type="linear"
-          dataKey="value"
-          data={resistancePoints}
-          stroke={pattern.color}
-          strokeWidth={1.5}
-          strokeDasharray="5 5"
-          dot={false}
-          activeDot={(props) => (
-            <circle 
-              cx={props.cx} 
-              cy={props.cy} 
-              r={6} 
-              fill={pattern.color}
-              stroke="#ffffff" 
-              strokeWidth={1.5}
-              opacity={0.8}
-            />
-          )}
-          isAnimationActive={false}
-          name={`${pattern.name} Upper Line`}
-        />
-        
-        <Line
-          type="linear"
-          dataKey="value"
-          data={supportPoints}
-          stroke={pattern.color}
-          strokeWidth={1.5}
-          strokeDasharray="5 5"
-          dot={false}
-          activeDot={(props) => (
-            <circle 
-              cx={props.cx} 
-              cy={props.cy} 
-              r={6} 
-              fill={pattern.color}
-              stroke="#ffffff" 
-              strokeWidth={1.5}
-              opacity={0.8}
-            />
-          )}
-          isAnimationActive={false}
-          name={`${pattern.name} Lower Line`}
-        />
-        
-        {/* Touch points */}
-        <Line
-          type="monotone"
-          dataKey="value"
-          data={highPointsData}
-          stroke="transparent"
-          dot={(props) => (
-            <circle 
-              cx={props.cx} 
-              cy={props.cy} 
-              r={3} 
-              fill={pattern.color}
-              stroke="#ffffff" 
-              strokeWidth={1}
-              opacity={0.5} // Semi-transparent
-            />
-          )}
-          activeDot={(props) => (
-            <g>
-              <circle 
-                cx={props.cx} 
-                cy={props.cy} 
-                r={6} 
-                fill={pattern.color}
-                stroke="#ffffff" 
-                strokeWidth={2}
-              />
-              <text 
-                x={props.cx + 10} 
-                y={props.cy} 
-                fill="#ffffff"
-                fontSize={12}
-                fontWeight="bold"
-              >
-                ${props.payload.value.toFixed(2)}
-              </text>
-              {props.payload.date && (
-                <text 
-                  x={props.cx + 10} 
-                  y={props.cy + 15} 
-                  fill="#aaaaaa"
-                  fontSize={10}
-                >
-                  {new Date(props.payload.date).toLocaleDateString()}
-                </text>
-              )}
-            </g>
-          )}
-          isAnimationActive={false}
-          name={`${pattern.name} High Points`}
-        />
-        
-        <Line
-          type="monotone"
-          dataKey="value"
-          data={lowPointsData}
-          stroke="transparent"
-          dot={(props) => (
-            <circle 
-              cx={props.cx} 
-              cy={props.cy} 
-              r={3} 
-              fill={pattern.color}
-              stroke="#ffffff" 
-              strokeWidth={1}
-              opacity={0.5} // Semi-transparent
-            />
-          )}
-          activeDot={(props) => (
-            <g>
-              <circle 
-                cx={props.cx} 
-                cy={props.cy} 
-                r={6} 
-                fill={pattern.color}
-                stroke="#ffffff" 
-                strokeWidth={2}
-              />
-              <text 
-                x={props.cx + 10} 
-                y={props.cy} 
-                fill="#ffffff"
-                fontSize={12}
-                fontWeight="bold"
-              >
-                ${props.payload.value.toFixed(2)}
-              </text>
-              {props.payload.date && (
-                <text 
-                  x={props.cx + 10} 
-                  y={props.cy + 15} 
-                  fill="#aaaaaa"
-                  fontSize={10}
-                >
-                  {new Date(props.payload.date).toLocaleDateString()}
-                </text>
-              )}
-            </g>
-          )}
-          isAnimationActive={false}
-          name={`${pattern.name} Low Points`}
-        />
-        
-        {/* Target reference line if available */}
-        {pattern.target && (
-          <ReferenceLine
-            y={pattern.target}
-            stroke={pattern.color}
-            strokeDasharray="3 3"
-            label={{
-              value: `Target: $${pattern.target.toFixed(2)}`,
-              position: 'right',
-              fill: pattern.color,
-              fontSize: 10,
-              fontWeight: 'bold'
-            }}
-          />
-        )}
-      </React.Fragment>
-    );
-  }
-  
-  // For rectangle patterns, draw the rectangle outline and detection points
-  else if (patternType.includes('rectangle') && pattern?.lines) {
-    const { resistance, support } = pattern.lines;
-    
-    // Get the actual high and low points that formed the pattern
-    const highs = pattern.points.highs || [];
-    const lows = pattern.points.lows || [];
-    
-    // Find the earliest and latest indices among all pattern points
-    const allPoints = [...highs, ...lows];
-    
-    if (allPoints.length === 0) {
-      // Fallback to reference line if no points
-      return (
-        <ReferenceLine
-          key={`target-${tIdx}`}
-          y={target.value}
-          stroke={target.color}
-          strokeDasharray="5 5"
-          strokeWidth={1.5}
-          label={{
-            value: target.label,
-            position: 'right',
-            fill: target.color,
-            fontSize: 10,
-            fontWeight: 'bold'
-          }}
-        />
-      );
-    }
-    
-    // Calculate rectangle boundaries
-    const startIdx = Math.min(...allPoints.map(p => p.index));
-    const endIdx = Math.max(...allPoints.map(p => p.index));
-    
-    // Convert to chart positions
-    const startPos = (startIdx / (chartData.length - 1)) * 100;
-    const endPos = (endIdx / (chartData.length - 1)) * 100;
-    
-    // Create rectangle lines with pattern information for hover
-    const resistancePoints = [
-      { 
-        xPosition: startPos, 
-        value: resistance.intercept,
-        patternName: pattern.name,
-        patternColor: pattern.color,
-        patternDirection: pattern.direction
-      },
-      { 
-        xPosition: endPos, 
-        value: resistance.intercept,
-        patternName: pattern.name,
-        patternColor: pattern.color,
-        patternDirection: pattern.direction
-      }
-    ];
-    
-    const supportPoints = [
-      { 
-        xPosition: startPos, 
-        value: support.intercept,
-        patternName: pattern.name,
-        patternColor: pattern.color,
-        patternDirection: pattern.direction
-      },
-      { 
-        xPosition: endPos, 
-        value: support.intercept,
-        patternName: pattern.name,
-        patternColor: pattern.color,
-        patternDirection: pattern.direction
-      }
-    ];
-    
-    // Left and right vertical connecting lines
-    const leftPoints = [
-      { 
-        xPosition: startPos, 
-        value: support.intercept,
-        patternName: pattern.name,
-        patternColor: pattern.color,
-        patternDirection: pattern.direction
-      },
-      { 
-        xPosition: startPos, 
-        value: resistance.intercept,
-        patternName: pattern.name,
-        patternColor: pattern.color,
-        patternDirection: pattern.direction
-      }
-    ];
-    
-    const rightPoints = [
-      { 
-        xPosition: endPos, 
-        value: support.intercept,
-        patternName: pattern.name,
-        patternColor: pattern.color,
-        patternDirection: pattern.direction
-      },
-      { 
-        xPosition: endPos, 
-        value: resistance.intercept,
-        patternName: pattern.name,
-        patternColor: pattern.color,
-        patternDirection: pattern.direction
-      }
-    ];
-    
-    // Convert actual detection points to chart positions for visualization
-    const highPointsData = highs.map(high => {
-      const xPosition = (high.index / (chartData.length - 1)) * 100;
-      return {
-        xPosition,
-        value: high.value,
-        date: high.date,
-        pointType: "Resistance Touch",
-        patternName: pattern.name,
-        patternDirection: pattern.direction
-      };
-    });
-    
-    const lowPointsData = lows.map(low => {
-      const xPosition = (low.index / (chartData.length - 1)) * 100;
-      return {
-        xPosition,
-        value: low.value,
-        date: low.date,
-        pointType: "Support Touch",
-        patternName: pattern.name,
-        patternDirection: pattern.direction
-      };
-    });
-    
-    return (
-      <React.Fragment key={`rectangle-${tIdx}`}>
-        {/* Rectangle outline */}
-        <Line
-          type="linear"
-          dataKey="value"
-          data={resistancePoints}
-          stroke={pattern.color}
-          strokeWidth={1.5}
-          strokeDasharray="5 5"
-          dot={false}
-          activeDot={false}
-          isAnimationActive={false}
-          name={`${pattern.name} Resistance Line`}
-        />
-        
-        <Line
-          type="linear"
-          dataKey="value"
-          data={supportPoints}
-          stroke={pattern.color}
-          strokeWidth={1.5}
-          strokeDasharray="5 5"
-          dot={false}
-          activeDot={false}
-          isAnimationActive={false}
-          name={`${pattern.name} Support Line`}
-        />
-        
-        <Line
-          type="linear"
-          dataKey="value"
-          data={leftPoints}
-          stroke={pattern.color}
-          strokeWidth={1.5}
-          strokeDasharray="5 5"
-          dot={false}
-          activeDot={false}
-          isAnimationActive={false}
-          name={`${pattern.name} Left Side`}
-        />
-        
-        <Line
-          type="linear"
-          dataKey="value"
-          data={rightPoints}
-          stroke={pattern.color}
-          strokeWidth={1.5}
-          strokeDasharray="5 5"
-          dot={false}
-          activeDot={false}
-          isAnimationActive={false}
-          name={`${pattern.name} Right Side`}
-        />
-        
-        {/* Show points all the time, but use minimal styling */}
-        <Line
-          type="monotone"
-          dataKey="value"
-          data={highPointsData}
-          stroke="transparent"
-          dot={(props) => (
-            <circle 
-              cx={props.cx} 
-              cy={props.cy} 
-              r={3} 
-              fill={pattern.color}
-              stroke="#ffffff" 
-              strokeWidth={1}
-              opacity={0.5} // Semi-transparent
-            />
-          )}
-          activeDot={(props) => (
-            <g>
-              <circle 
-                cx={props.cx} 
-                cy={props.cy} 
-                r={6} 
-                fill={pattern.color}
-                stroke="#ffffff" 
-                strokeWidth={2}
-              />
-              <text 
-                x={props.cx + 10} 
-                y={props.cy} 
-                fill="#ffffff"
-                fontSize={12}
-                fontWeight="bold"
-              >
-                ${props.payload.value.toFixed(2)}
-              </text>
-              {props.payload.date && (
-                <text 
-                  x={props.cx + 10} 
-                  y={props.cy + 15} 
-                  fill="#aaaaaa"
-                  fontSize={10}
-                >
-                  {new Date(props.payload.date).toLocaleDateString()}
-                </text>
-              )}
-            </g>
-          )}
-          isAnimationActive={false}
-          name={`${pattern.name} High Points`}
-        />
-        
-        <Line
-          type="monotone"
-          dataKey="value"
-          data={lowPointsData}
-          stroke="transparent"
-          dot={(props) => (
-            <circle 
-              cx={props.cx} 
-              cy={props.cy} 
-              r={3} 
-              fill={pattern.color}
-              stroke="#ffffff" 
-              strokeWidth={1}
-              opacity={0.5} // Semi-transparent
-            />
-          )}
-          activeDot={(props) => (
-            <g>
-              <circle 
-                cx={props.cx} 
-                cy={props.cy} 
-                r={6} 
-                fill={pattern.color}
-                stroke="#ffffff" 
-                strokeWidth={2}
-              />
-              <text 
-                x={props.cx + 10} 
-                y={props.cy} 
-                fill="#ffffff"
-                fontSize={12}
-                fontWeight="bold"
-              >
-                ${props.payload.value.toFixed(2)}
-              </text>
-              {props.payload.date && (
-                <text 
-                  x={props.cx + 10} 
-                  y={props.cy + 15} 
-                  fill="#aaaaaa"
-                  fontSize={10}
-                >
-                  {new Date(props.payload.date).toLocaleDateString()}
-                </text>
-              )}
-            </g>
-          )}
-          isAnimationActive={false}
-          name={`${pattern.name} Low Points`}
-        />
-      </React.Fragment>
-    );
-  }
-  
-  // For pennant patterns, draw the mast and the pennant (small triangle)
-  else if (patternType.includes('pennant') && pattern) {
-    // Get mast points
-    const mastStart = pattern.points.mastStart;
-    const mastEnd = pattern.points.mastEnd;
-    
-    // If we can't find mast points, fall back to reference line
-    if (!mastStart || !mastEnd) {
-      return (
-        <ReferenceLine
-          key={`target-${tIdx}`}
-          y={target.value}
-          stroke={target.color}
-          strokeDasharray="5 5"
-          strokeWidth={1.5}
-          label={{
-            value: target.label,
-            position: 'right',
-            fill: target.color,
-            fontSize: 10,
-            fontWeight: 'bold'
-          }}
-        />
-      );
-    }
-    
-    // Convert indices to chart positions
-    const mastStartPos = (mastStart.index / (chartData.length - 1)) * 100;
-    const mastEndPos = (mastEnd.index / (chartData.length - 1)) * 100;
-    
-    // Create mast line
-    const mastPoints = [
-      { xPosition: mastStartPos, value: mastStart.value },
-      { xPosition: mastEndPos, value: mastEnd.value }
-    ];
-    
-    // Find the pennant end (apex or latest point)
-    const highs = pattern.points.highs || [];
-    const lows = pattern.points.lows || [];
-    
-    // If no pennant points, just show the mast
-    if (highs.length === 0 || lows.length === 0) {
-      return (
-        <Line
-          key={`pennant-mast-${tIdx}`}
-          type="linear"
-          dataKey="value"
-          data={mastPoints}
-          stroke={pattern.color}
-          strokeWidth={2}
-          dot={(props) => (
-            <circle 
-              cx={props.cx} 
-              cy={props.cy} 
-              r={4} 
-              fill={pattern.color}
-              stroke="#fff" 
-              strokeWidth={1}
-            />
-          )}
-          activeDot={false}
-          isAnimationActive={false}
-          name={`${pattern.name} Mast`}
-        />
-      );
-    }
-    
-    // Get last high and low point to form the pennant
-    const lastHigh = highs[highs.length - 1];
-    const lastLow = lows[lows.length - 1];
-    
-    // Convert to chart positions
-    const lastHighPos = (lastHigh.index / (chartData.length - 1)) * 100;
-    const lastLowPos = (lastLow.index / (chartData.length - 1)) * 100;
-    
-    // Find the end of the pennant (furthest index)
-    const pennantEndIdx = Math.max(lastHigh.index, lastLow.index);
-    const pennantEndPos = (pennantEndIdx / (chartData.length - 1)) * 100;
-    
-    return (
-      <React.Fragment key={`pennant-${tIdx}`}>
-        {/* Mast line */}
-        <Line
-          type="linear"
-          dataKey="value"
-          data={mastPoints}
-          stroke={pattern.color}
-          strokeWidth={2}
-          dot={(props) => (
-            <circle 
-              cx={props.cx} 
-              cy={props.cy} 
-              r={4} 
-              fill={pattern.color}
-              stroke="#fff" 
-              strokeWidth={1}
-            />
-          )}
-          activeDot={false}
-          isAnimationActive={false}
-          name={`${pattern.name} Mast`}
-        />
-        
-        {/* Pennant upper line */}
-        <Line
-          type="linear"
-          dataKey="value"
-          data={[
-            { xPosition: mastEndPos, value: mastEnd.value },
-            { xPosition: lastHighPos, value: lastHigh.value }
-          ]}
-          stroke={pattern.color}
-          strokeWidth={1.5}
-          strokeDasharray="5 5"
-          dot={false}
-          activeDot={false}
-          isAnimationActive={false}
-          name={`${pattern.name} Upper Pennant`}
-        />
-        
-        {/* Pennant lower line */}
-        <Line
-          type="linear"
-          dataKey="value"
-          data={[
-            { xPosition: mastEndPos, value: mastEnd.value },
-            { xPosition: lastLowPos, value: lastLow.value }
-          ]}
-          stroke={pattern.color}
-          strokeWidth={1.5}
-          strokeDasharray="5 5"
-          dot={false}
-          activeDot={false}
-          isAnimationActive={false}
-          name={`${pattern.name} Lower Pennant`}
-        />
-      </React.Fragment>
-    );
-  }
-  
-  // For all other patterns, use ReferenceLine
-  return (
-    <ReferenceLine
-      key={`target-${tIdx}`}
-      y={target.value}
-      stroke={target.color}
-      strokeDasharray={target.dashed ? "5 5" : "0"}
-      strokeWidth={1.5}
-      label={{
-        value: target.label,
-        position: 'right',
-        fill: target.color,
-        fontSize: 10,
-        fontWeight: 'bold'
-      }}
-    />
-  );
-})}
-            </LineChart>
-            {/* Explicit wedge pattern visualization */}
-{hasPatterns && chartPatterns.filter(p => p.type.includes('wedge')).map((wedgePattern, idx) => {
-  // Only proceed if it's a wedge pattern with lines
-  if (!wedgePattern.lines || !wedgePattern.lines.resistance || !wedgePattern.lines.support) return null;
-  
-  const { resistance, support } = wedgePattern.lines;
-  
-  // Get chart data range for better positioning
-  const firstPointIndex = 0;
-  const lastPointIndex = chartData.length - 1;
-  
-  // Calculate wedge line positions based on slope and intercept
-  const resistanceStart = resistance.slope * firstPointIndex + resistance.intercept;
-  const resistanceEnd = resistance.slope * lastPointIndex + resistance.intercept;
-  
-  const supportStart = support.slope * firstPointIndex + support.intercept;
-  const supportEnd = support.slope * lastPointIndex + support.intercept;
-  
-  const lineColor = wedgePattern.type.includes('falling_wedge') ? "#22c55e" : wedgePattern.color;
-  
-  return (
-    <React.Fragment key={`wedge-manual-${idx}`}>
-      {/* Top line of wedge */}
-      <Line
-        type="linear"
-        dataKey="value"
-        data={[
-          { xPosition: 0, value: resistanceStart, 
-            wedgeInfo: true, 
-            name: wedgePattern.name,
-            direction: wedgePattern.direction,
-            target: wedgePattern.target
-          },
-          { xPosition: 100, value: resistanceEnd, 
-            wedgeInfo: true,
-            name: wedgePattern.name,
-            direction: wedgePattern.direction,
-            target: wedgePattern.target
+              }
+
+              // H&S: peak connector + gold neckline
+              if (type?.includes('head_and_shoulders') && !type?.includes('inverse')) {
+                if (points.leftShoulder && points.head && points.rightShoulder) {
+                  out.push({ points: [
+                    { date: points.leftShoulder.date,  value: points.leftShoulder.value },
+                    { date: points.head.date,           value: points.head.value },
+                    { date: points.rightShoulder.date,  value: points.rightShoulder.value },
+                  ], color, width: 1.5, dashed: false });
+                }
+                if (points.leftTrough && points.rightTrough) {
+                  out.push({ points: [
+                    { date: points.leftTrough.date,  value: points.leftTrough.value },
+                    { date: points.rightTrough.date, value: points.rightTrough.value },
+                  ], color: '#F5C518', width: 2, dashed: true });
+                }
+              }
+
+              // Inverse H&S
+              if (type?.includes('inverse_head_and_shoulders')) {
+                if (points.leftShoulder && points.head && points.rightShoulder) {
+                  out.push({ points: [
+                    { date: points.leftShoulder.date,  value: points.leftShoulder.value },
+                    { date: points.head.date,           value: points.head.value },
+                    { date: points.rightShoulder.date,  value: points.rightShoulder.value },
+                  ], color, width: 1.5, dashed: false });
+                }
+                if (points.leftPeak && points.rightPeak) {
+                  out.push({ points: [
+                    { date: points.leftPeak.date,  value: points.leftPeak.value },
+                    { date: points.rightPeak.date, value: points.rightPeak.value },
+                  ], color: '#F5C518', width: 2, dashed: true });
+                }
+              }
+
+              // Double Top: M-shape + horizontal gold neckline
+              if (type === 'double_top' && points.firstPeak && points.secondPeak && points.trough) {
+                out.push({ points: [
+                  { date: points.firstPeak.date,  value: points.firstPeak.value },
+                  { date: points.trough.date,     value: points.trough.value },
+                  { date: points.secondPeak.date, value: points.secondPeak.value },
+                ], color, width: 1.5, dashed: false });
+                out.push({ points: [
+                  { date: points.firstPeak.date,  value: points.trough.value },
+                  { date: points.secondPeak.date, value: points.trough.value },
+                ], color: '#F5C518', width: 1.5, dashed: true });
+              }
+
+              // Double Bottom: W-shape + horizontal gold neckline
+              if (type === 'double_bottom' && points.firstTrough && points.secondTrough && points.peak) {
+                out.push({ points: [
+                  { date: points.firstTrough.date,  value: points.firstTrough.value },
+                  { date: points.peak.date,         value: points.peak.value },
+                  { date: points.secondTrough.date, value: points.secondTrough.value },
+                ], color, width: 1.5, dashed: false });
+                out.push({ points: [
+                  { date: points.firstTrough.date,  value: points.peak.value },
+                  { date: points.secondTrough.date, value: points.peak.value },
+                ], color: '#F5C518', width: 1.5, dashed: true });
+              }
+
+              // Pennant: thick mast line
+              if (type?.includes('pennant') && points.mastStart && points.mastEnd) {
+                out.push({ points: [
+                  { date: points.mastStart.date, value: points.mastStart.value },
+                  { date: points.mastEnd.date,   value: points.mastEnd.value },
+                ], color, width: 2.5, dashed: false });
+              }
+
+              return out;
+            }) : []
           }
-        ]}
-        stroke={lineColor}
-        strokeWidth={2}
-        strokeDasharray="5 5"
-        dot={false}
-        activeDot={(props) => (
-          <g>
-            <circle 
-              cx={props.cx} 
-              cy={props.cy} 
-              r={6} 
-              fill={lineColor}
-              stroke="#ffffff" 
-              strokeWidth={2}
-            />
-            <text 
-              x={props.cx + 10} 
-              y={props.cy} 
-              fill="#ffffff"
-              fontSize={12}
-              fontWeight="bold"
-              textAnchor="start"
-            >
-              {wedgePattern.name} ({wedgePattern.direction})
-            </text>
-            {wedgePattern.target && (
-              <text 
-                x={props.cx + 10} 
-                y={props.cy + 15} 
-                fill="#aaaaaa"
-                fontSize={10}
-                textAnchor="start"
-              >
-                Target: ${wedgePattern.target.toFixed(2)}
-              </text>
-            )}
-          </g>
-        )}
-        isAnimationActive={false}
-      />
-      
-      {/* Bottom line of wedge */}
-      <Line
-        type="linear"
-        dataKey="value"
-        data={[
-          { xPosition: 0, value: supportStart, 
-            wedgeInfo: true, 
-            name: wedgePattern.name,
-            direction: wedgePattern.direction,
-            target: wedgePattern.target
-          },
-          { xPosition: 100, value: supportEnd, 
-            wedgeInfo: true,
-            name: wedgePattern.name,
-            direction: wedgePattern.direction,
-            target: wedgePattern.target
+          priceLines={
+            hasPatterns ? allTargetLines
+              .filter(t => t.value != null && !isNaN(t.value))
+              .map(t => ({
+                value: t.value,
+                color: t.color || '#787B86',
+                label: t.label || '',
+                dashed: true,
+              })) : []
           }
-        ]}
-        stroke={lineColor}
-        strokeWidth={2}
-        strokeDasharray="5 5"
-        dot={false}
-        activeDot={(props) => (
-          <g>
-            <circle 
-              cx={props.cx} 
-              cy={props.cy} 
-              r={6} 
-              fill={lineColor}
-              stroke="#ffffff" 
-              strokeWidth={2}
-            />
-            <text 
-              x={props.cx + 10} 
-              y={props.cy} 
-              fill="#ffffff"
-              fontSize={12}
-              fontWeight="bold"
-              textAnchor="start"
-            >
-              {wedgePattern.name} ({wedgePattern.direction})
-            </text>
-            {wedgePattern.target && (
-              <text 
-                x={props.cx + 10} 
-                y={props.cy + 15} 
-                fill="#aaaaaa"
-                fontSize={10}
-                textAnchor="start"
-              >
-                Target: ${wedgePattern.target.toFixed(2)}
-              </text>
-            )}
-          </g>
-        )}
-        isAnimationActive={false}
-      />
-    </React.Fragment>
-  );
-})}
-          </ResponsiveContainer>
-        </div>
-        
+        />
         {analysisContent()}
-      </div>
+      </>
     );
   };
+
 
   if (isLoading.long && isLoading.short && isLoading.veryShort) {
     return (

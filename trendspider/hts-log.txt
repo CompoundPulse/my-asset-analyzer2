@@ -1,0 +1,13 @@
+HTTrack3.49-2 launched on Sat, 21 Feb 2026 12:39:32 at https://www.trendspider.com +*.trendspider.com/*
+(httrack https://www.trendspider.com -O ./trendspider +*.trendspider.com/* -r3 -r2 -%c8 -n )
+
+Information, Warnings and Errors reported for this mirror:
+note:	the hts-log.txt file, and hts-cache folder, may contain sensitive information,
+	such as username/password authentication for websites mirrored in this project
+	do not share these files/folders if you want these information to remain private
+
+12:39:32	Warning: 	* security warning: maximum number of connections per second limited to 5.000000 to avoid server overload
+12:39:35	Warning: 	Moved Permanently for https://www.trendspider.com/
+12:39:35	Warning: 	Redirected link is identical because of 'URL Hack' option: https://www.trendspider.com/ and https://trendspider.com/
+12:39:35	Warning: 	File has moved from https://www.trendspider.com/ to https://trendspider.com/
+12:39:35	Warning: 	No data seems to have been transferred during this session! : restoring previous one!

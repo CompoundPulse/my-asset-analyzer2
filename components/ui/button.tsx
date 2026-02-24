@@ -1,28 +1,55 @@
 import * as React from "react"
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {}
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'default' | 'outline' | 'ghost'
+}
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, children, ...props }, ref) => {
+  ({ className, variant = 'default', style, children, disabled, ...props }, ref) => {
+    const base: React.CSSProperties = {
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '6px',
+      borderRadius: '4px',
+      fontSize: '13px',
+      fontWeight: 500,
+      padding: '7px 14px',
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      opacity: disabled ? 0.4 : 1,
+      transition: 'background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease',
+      border: 'none',
+      outline: 'none',
+      whiteSpace: 'nowrap',
+      WebkitTapHighlightColor: 'transparent',
+    }
+
+    const variants: Record<string, React.CSSProperties> = {
+      default: {
+        backgroundColor: '#2962FF',
+        color: '#FFFFFF',
+        border: 'none',
+      },
+      outline: {
+        backgroundColor: 'transparent',
+        color: '#787B86',
+        border: '1px solid #2A2E39',
+      },
+      ghost: {
+        backgroundColor: 'transparent',
+        color: '#787B86',
+        border: '1px solid #2A2E39',
+      },
+    }
+
     return (
       <button
-        className={`inline-flex items-center justify-center 
-        relative px-6 py-2 h-10
-        bg-[#1a1f2d] border border-blue-500/30 text-white 
-        rounded-xl overflow-hidden
-        shadow-[0_0_15px_rgba(59,130,246,0.5)] 
-        hover:shadow-[0_0_20px_rgba(59,130,246,0.7)]
-        transition-all duration-300 hover:bg-[#1e2435]
-        focus-visible:outline-none focus-visible:ring-2 
-        focus-visible:ring-blue-500/50 
-        disabled:pointer-events-none disabled:opacity-50
-        group ${className || ''}`}
         ref={ref}
+        disabled={disabled}
+        style={{ ...base, ...variants[variant], ...style }}
+        className={className || ''}
         {...props}
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent 
-        via-white/5 to-transparent transform translate-x-[-100%] 
-        group-hover:translate-x-[100%] transition-transform duration-1000"/>
         {children}
       </button>
     )

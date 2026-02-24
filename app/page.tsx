@@ -1,27 +1,16 @@
 "use client"
 
 import dynamic from 'next/dynamic'
-import { Suspense, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 
-const AssetAnalyzer = dynamic(() => import('../components/AssetAnalyzer.jsx'), {
+const LandingPage = dynamic(() => import('../components/LandingPage.jsx'), {
   ssr: false,
-  loading: () => <div>Loading...</div>
+  loading: () => <div style={{ background: '#0e101a', minHeight: '100vh' }} />,
 })
 
 export default function Home() {
-  const [isMounted, setIsMounted] = useState(false)
-
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
-
-  if (!isMounted) {
-    return <div>Loading...</div>
-  }
-
-  return (
-    <main className="min-h-screen p-4">
-      <AssetAnalyzer />
-    </main>
-  )
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  if (!mounted) return <div style={{ background: '#0e101a', minHeight: '100vh' }} />
+  return <LandingPage />
 }

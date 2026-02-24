@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+// recharts replaced by TVPatternChart
+import TVPatternChart from './TVPatternChart';
 import { handlePatternFetch, handleShortPatternFetch, handleVeryShortPatternFetch } from './stockUtils';
 import { chartPatternAnalysisWithHarmonics as chartPatternAnalysis } from './chartPatternAnalysis';
 
@@ -266,15 +267,15 @@ const AdvancedPatternDetector = ({ symbol }) => {
           <div className="font-bold text-2xl text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500 mb-3">Analysis Summary for {symbol}:</div>
           
           <div className="ml-4 mt-3 space-y-2">
-            <div className="flex items-center">
-              <span className="mr-2">Trend:</span>
-              <span className={`px-3 py-1 rounded-full ${
-                analysisData.trend?.trend === 'bullish' ? 'bg-green-900/50 text-green-400 border border-green-500' : 
-                analysisData.trend?.trend === 'bearish' ? 'bg-red-900/50 text-red-400 border border-red-500' : 'bg-gray-800/50 text-gray-400 border border-gray-500'
-              } font-bold`}>
-                {analysisData.trend?.trend} 
-                {analysisData.trend?.strength > 0 ? 
-                  ` (${analysisData.trend?.strength === 2 ? 'Strong' : 'Moderate'})` : ''}
+            <div style={{display:'flex',alignItems:'center',gap:6}}>
+              <span style={{color:'#787B86',fontSize:12}}>Trend:</span>
+              <span style={{
+                color: analysisData.trend?.trend === 'bullish' ? '#26A69A' : analysisData.trend?.trend === 'bearish' ? '#EF5350' : '#787B86',
+                fontWeight: 600,
+                fontSize: 12,
+              }}>
+                {analysisData.trend?.trend?.toUpperCase()}
+                {analysisData.trend?.strength > 0 ? ` · ${analysisData.trend?.strength === 2 ? 'Strong' : 'Moderate'}` : ''}
               </span>
             </div>
             
@@ -389,319 +390,95 @@ const AdvancedPatternDetector = ({ symbol }) => {
     };
 
     return (
-      <div className="bg-gradient-to-br from-black via-gray-900 to-black rounded-lg p-4 mb-6 border-2 border-yellow-400 shadow-lg shadow-yellow-400/20">
-        <h3 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-600 mb-4">{title} - {symbol}</h3>
-        <div className="h-96">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,0,0.15)" />
-              <XAxis 
-                dataKey="date" 
-                stroke="rgba(255,255,0,0.9)"
-                tick={{ fill: 'rgba(255,255,0,0.9)' }}
-                tickFormatter={(value) => new Date(value).toLocaleDateString()}
-                interval={Math.floor(chartData.length / 5)}
-                axisLine={{ stroke: 'rgba(255,255,0,0.4)' }}
-              />
-              <YAxis 
-                stroke="rgba(255,255,0,0.9)"
-                tick={{ fill: 'rgba(255,255,0,0.9)' }}
-                tickFormatter={(value) => `$${value.toFixed(2)}`}
-                domain={[
-                  dataMin => Math.floor(dataMin * 0.99), // 1% padding below
-                  dataMax => Math.ceil(dataMax * 1.01)   // 1% padding above
-                ]}
-                axisLine={{ stroke: 'rgba(255,255,0,0.4)' }}
-              />
-              <Tooltip 
-                contentStyle={{
-                  backgroundColor: 'rgba(0,0,0,0.95)',
-                  border: '2px solid rgba(255,215,0,0.8)',
-                  borderRadius: '8px',
-                  color: '#ffd700',
-                  boxShadow: '0 4px 12px rgba(255, 215, 0, 0.3)'
-                }}
-                labelFormatter={(value) => new Date(value).toLocaleDateString()}
-                formatter={(value) => [`$${parseFloat(value).toFixed(2)}`, 'Price']}
-                cursor={{ stroke: 'rgba(255,215,0,0.5)', strokeWidth: 1 }}
-              />
-              
-              {/* Main price line */}
-              <Line 
-                type="monotone" 
-                dataKey="value" 
-                stroke="#ffd700" 
-                dot={false} 
-                strokeWidth={3}
-                activeDot={{ stroke: '#ffffff', strokeWidth: 2, r: 6, fill: '#ffd700' }}
-              />
-              
-              {/* Short Moving Average */}
-              {shortMA.length > 0 && (
-                <Line
-                  type="monotone"
-                  data={shortMA}
-                  dataKey="value"
-                  stroke="#ff9500"
-                  dot={false}
-                  strokeWidth={2.5}
-                  name="50-day MA"
-                  strokeOpacity={0.9}
-                  activeDot={{ stroke: '#ffffff', strokeWidth: 2, r: 4, fill: '#ff9500' }}
-                />
-              )}
-              
-              {/* Long Moving Average */}
-              {longMA.length > 0 && (
-                <Line
-                  type="monotone"
-                  data={longMA}
-                  dataKey="value"
-                  stroke="#60a5fa"
-                  dot={false}
-                  strokeWidth={2.5}
-                  name="200-day MA"
-                  strokeOpacity={0.9}
-                  activeDot={{ stroke: '#ffffff', strokeWidth: 2, r: 4, fill: '#60a5fa' }}
-                />
-              )}
-              
-              {/* Fibonacci Levels */}
-              {fibonacciLevels.length > 0 && fibonacciLevels.map((level, i) => (
-                level.ratio !== 0 && level.ratio !== 1 && (
-                  <ReferenceLine 
-                    key={`fib-${i}`}
-                    y={level.price} 
-                    stroke="#fbbf24" 
-                    strokeDasharray="3 3" 
-                    label={{ 
-                      value: `Fib ${level.ratio}`, 
-                      position: 'right',
-                      fill: '#fbbf24'
-                    }}
-                  />
-                )
-              ))}
-              
-              {/* Support lines with improved styling */}
-              {supportLines.map((level, i) => (
-                <ReferenceLine 
-                  key={`support-${i}`}
-                  y={level.price} 
-                  stroke={level.hasActedAsBoth ? "#65a30d" : "#10b981"} 
-                  strokeWidth={level.reliability === 'high' ? 2 : 1}
-                  strokeDasharray={level.reliability === 'high' ? "none" : "3 3"} 
-                  label={{ 
-                    value: `S${i+1}`, 
-                    position: 'right',
-                    fill: level.hasActedAsBoth ? "#65a30d" : "#10b981"
-                  }}
-                />
-              ))}
-              
-              {/* Resistance lines with improved styling */}
-              {resistanceLines.map((level, i) => (
-                <ReferenceLine 
-                  key={`resistance-${i}`}
-                  y={level.price} 
-                  stroke={level.hasActedAsBoth ? "#f97316" : "#ff0000"} 
-                  strokeWidth={level.reliability === 'high' ? 2 : 1}
-                  strokeDasharray={level.reliability === 'high' ? "none" : "3 3"}
-                  label={{ 
-                    value: `R${i+1}`, 
-                    position: 'right',
-                    fill: level.hasActedAsBoth ? "#f97316" : "#ff0000"
-                  }}
-                />
-              ))}
-              
-              {/* Uptrend line */}
-              {uptrendData.length > 0 && (
-                <Line
-                  data={uptrendData}
-                  type="monotone"
-                  dataKey="trendValue"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              )}
-              
-              {/* Downtrend line */}
-              {downtrendData.length > 0 && (
-                <Line
-                  data={downtrendData}
-                  type="monotone"
-                  dataKey="trendValue"
-                  stroke="#ff0000"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              )}
-              
-              {/* Head and Shoulders Pattern */}
-              {hsPatterns.length > 0 && (
-                <>
-                  <ReferenceLine
-                    x={hsPatterns[0].leftShoulder.date}
-                    stroke="#ff0000"
-                    strokeDasharray="3 3"
-                    label={{
-                      value: 'LS',
-                      position: 'top',
-                      fill: "#ff0000"
-                    }}
-                  />
-                  <ReferenceLine
-                    x={hsPatterns[0].head.date}
-                    stroke="#ff0000"
-                    strokeDasharray="3 3"
-                    label={{
-                      value: 'H',
-                      position: 'top',
-                      fill: "#ff0000"
-                    }}
-                  />
-                  <ReferenceLine
-                    x={hsPatterns[0].rightShoulder.date}
-                    stroke="#ff0000"
-                    strokeDasharray="3 3"
-                    label={{
-                      value: 'RS',
-                      position: 'top',
-                      fill: "#ff0000"
-                    }}
-                  />
-                  
-                  {/* Neckline */}
-                  {necklineData.length > 0 && (
-                    <Line
-                      data={necklineData}
-                      type="linear"
-                      dataKey="necklineValue"
-                      stroke="#ff0000"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  )}
-                </>
-              )}
-              
-              {/* Inverse Head and Shoulders Pattern */}
-              {invHsPatterns.length > 0 && (
-                <>
-                  <ReferenceLine
-                    x={invHsPatterns[0].leftShoulder.date}
-                    stroke="#10b981"
-                    strokeDasharray="3 3"
-                    label={{
-                      value: 'LS',
-                      position: 'bottom',
-                      fill: "#10b981"
-                    }}
-                  />
-                  <ReferenceLine
-                    x={invHsPatterns[0].head.date}
-                    stroke="#10b981"
-                    strokeDasharray="3 3"
-                    label={{
-                      value: 'H',
-                      position: 'bottom',
-                      fill: "#10b981"
-                    }}
-                  />
-                  <ReferenceLine
-                    x={invHsPatterns[0].rightShoulder.date}
-                    stroke="#10b981"
-                    strokeDasharray="3 3"
-                    label={{
-                      value: 'RS',
-                      position: 'bottom',
-                      fill: "#10b981"
-                    }}
-                  />
-                  
-                  {/* Inverse Neckline */}
-                  {invNecklineData.length > 0 && (
-                    <Line
-                      data={invNecklineData}
-                      type="linear"
-                      dataKey="necklineValue"
-                      stroke="#10b981"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  )}
-                </>
-              )}
-              
-              {/* Harmonic Patterns - More Prominent Version */}
-              {harmonic.map((pattern, idx) => {
-                const lineData = createHarmonicLines(pattern);
-                const color = getHarmonicColor(pattern.type);
-                const patternName = pattern.name || pattern.type.replace(/(bullish|bearish)_/, '');
-                
-                return (
-                  <React.Fragment key={`harmonic-${idx}`}>
-                    {/* Connection lines between points */}
-                    <Line
-                      data={lineData}
-                      type="linear"
-                      dataKey="harmonicValue"
-                      stroke={color}
-                      strokeWidth={3}
-                      strokeOpacity={0.8}
-                      connectNulls={false}
-                      name={patternName}
-                      // Highlight dots for pattern points
-                      dot={(props) => {
-                        const { cx, cy, payload } = props;
-                        const pointKey = Object.keys(pattern.points).find(key => 
-                          pattern.points[key].date === payload.date
-                        );
-                        if (!pointKey) return null;
-                        
-                        return (
-                          <g>
-                            {/* Outer glow effect */}
-                            <circle cx={cx} cy={cy} r={8} fill="black" fillOpacity={0.3} />
-                            {/* Main point circle */}
-                            <circle cx={cx} cy={cy} r={6} fill={color} stroke="#fff" strokeWidth={2} />
-                            {/* Label with background for better visibility */}
-                            <rect 
-                              x={cx - 10} 
-                              y={cy - 25} 
-                              width={20} 
-                              height={20} 
-                              fill="black" 
-                              fillOpacity={0.7} 
-                              rx={4} 
-                            />
-                            <text 
-                              x={cx} 
-                              y={cy - 12} 
-                              textAnchor="middle" 
-                              fill={color} 
-                              fontWeight="bold" 
-                              fontSize={14}
-                            >
-                              {pointKey}
-                            </text>
-                          </g>
-                        );
-                      }}
-                    />
-                  </React.Fragment>
-                );
-              })}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-        
+      <>
+        <TVPatternChart
+          data={chartData}
+          title={title}
+          symbol={symbol}
+          height={320}
+          extraSeries={[
+            ...(shortMA.length > 0 ? [{ data: shortMA, color: '#FF9800', name: '50MA', width: 1.5 }] : []),
+            ...(longMA.length > 0  ? [{ data: longMA,  color: '#60A5FA', name: '200MA', width: 1.5, dashed: true }] : []),
+            ...(uptrendData.length > 0   ? [{ data: uptrendData.map(p=>({date:p.date,value:p.trendValue})).filter(p=>p.value!=null),   color: '#26A69A', name: 'Uptrend',   width: 1.5 }] : []),
+            ...(downtrendData.length > 0 ? [{ data: downtrendData.map(p=>({date:p.date,value:p.trendValue})).filter(p=>p.value!=null), color: '#EF5350', name: 'Downtrend', width: 1.5 }] : []),
+          ]}
+          priceLines={[
+            ...fibonacciLevels
+              .filter(l => l.ratio !== 0 && l.ratio !== 1)
+              .map(l => ({ value: l.price, color: '#F5C518', label: `Fib ${l.ratio}`, dashed: true })),
+            ...supportLines.map((l, i) => ({
+              value: l.price, color: l.hasActedAsBoth ? '#8BC34A' : '#26A69A',
+              label: `S${i+1}`, width: l.reliability === 'high' ? 2 : 1, dashed: l.reliability !== 'high',
+            })),
+            ...resistanceLines.map((l, i) => ({
+              value: l.price, color: l.hasActedAsBoth ? '#FF6B35' : '#EF5350',
+              label: `R${i+1}`, width: l.reliability === 'high' ? 2 : 1, dashed: l.reliability !== 'high',
+            })),
+          ]}
+          markers={[
+            ...(hsPatterns.length > 0 ? [
+              { time: hsPatterns[0].leftShoulder.date,  label: 'LS', color: '#EF5350', position: 'above' },
+              { time: hsPatterns[0].head.date,          label: 'H',  color: '#EF5350', position: 'above' },
+              { time: hsPatterns[0].rightShoulder.date, label: 'RS', color: '#EF5350', position: 'above' },
+            ] : []),
+            ...(invHsPatterns.length > 0 ? [
+              { time: invHsPatterns[0].leftShoulder.date,  label: 'LS', color: '#26A69A', position: 'below' },
+              { time: invHsPatterns[0].head.date,          label: 'H',  color: '#26A69A', position: 'below' },
+              { time: invHsPatterns[0].rightShoulder.date, label: 'RS', color: '#26A69A', position: 'below' },
+            ] : []),
+            ...harmonic.flatMap(pattern => {
+              const color = getHarmonicColor(pattern.type);
+              return ['X','A','B','C','D']
+                .filter(k => pattern.points?.[k])
+                .map(k => ({
+                  time: pattern.points[k].date,
+                  label: k,
+                  color,
+                  position: ['X','B','D'].includes(k) ? 'below' : 'above',
+                }));
+            }),
+          ]}
+          slopeLines={[
+            // H&S peak connector + gold neckline
+            ...(hsPatterns.length > 0 ? [
+              { points: [
+                  { date: hsPatterns[0].leftShoulder.date,  value: hsPatterns[0].leftShoulder.value },
+                  { date: hsPatterns[0].head.date,          value: hsPatterns[0].head.value },
+                  { date: hsPatterns[0].rightShoulder.date, value: hsPatterns[0].rightShoulder.value },
+                ], color: '#EF5350', width: 1.5, dashed: false },
+              ...(necklineData.length >= 2 ? [{
+                points: necklineData.map(p => ({ date: p.date, value: p.necklineValue })).filter(p => p.value != null),
+                color: '#F5C518', width: 2, dashed: true,
+              }] : []),
+            ] : []),
+            // Inv H&S peak connector + gold neckline
+            ...(invHsPatterns.length > 0 ? [
+              { points: [
+                  { date: invHsPatterns[0].leftShoulder.date,  value: invHsPatterns[0].leftShoulder.value },
+                  { date: invHsPatterns[0].head.date,          value: invHsPatterns[0].head.value },
+                  { date: invHsPatterns[0].rightShoulder.date, value: invHsPatterns[0].rightShoulder.value },
+                ], color: '#26A69A', width: 1.5, dashed: false },
+              ...(invNecklineData.length >= 2 ? [{
+                points: invNecklineData.map(p => ({ date: p.date, value: p.necklineValue })).filter(p => p.value != null),
+                color: '#F5C518', width: 2, dashed: true,
+              }] : []),
+            ] : []),
+            // Harmonic XABCD zigzag connector
+            ...harmonic.map(pattern => ({
+              points: ['X','A','B','C','D']
+                .filter(k => pattern.points?.[k])
+                .map(k => ({ date: pattern.points[k].date, value: pattern.points[k].value })),
+              color: getHarmonicColor(pattern.type),
+              width: 2,
+              dashed: false,
+            })).filter(s => s.points.length >= 2),
+          ]}
+        />
         {renderAnalysisSummary()}
-      </div>
+      </>
     );
   };
+
 
   if (isLoading.long && isLoading.short && isLoading.veryShort) {
     return (

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+// recharts replaced by TVPatternChart
+import TVPatternChart from './TVPatternChart';
 import { 
   handlePatternFetch, 
   handleShortPatternFetch, 
@@ -887,107 +888,60 @@ const EnhancedHarmonicPatternDetector = ({ symbol }) => {
     };
 
     return (
-      <div className="bg-gradient-to-br from-black via-indigo-950 to-black rounded-lg p-4 mb-6 border-2 border-purple-400 shadow-lg shadow-purple-400/20">
-        <h3 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-purple-600 mb-4">{title} - {symbol}</h3>
-        <div className="h-96">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={enhancedChartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(167,139,250,0.15)" />
-              <XAxis 
-                dataKey="date" 
-                stroke="rgba(167,139,250,0.9)"
-                tick={{ fill: 'rgba(167,139,250,0.9)' }}
-                tickFormatter={(value) => new Date(value).toLocaleDateString()}
-                interval={Math.floor(chartData.length / 5)}
-                axisLine={{ stroke: 'rgba(167,139,250,0.4)' }}
-              />
-              <YAxis 
-                stroke="rgba(167,139,250,0.9)"
-                tick={{ fill: 'rgba(167,139,250,0.9)' }}
-                tickFormatter={(value) => `$${value.toFixed(2)}`}
-                domain={[
-                  dataMin => Math.floor(dataMin * 0.99), // 1% padding below
-                  dataMax => Math.ceil(dataMax * 1.01)   // 1% padding above
-                ]}
-                axisLine={{ stroke: 'rgba(167,139,250,0.4)' }}
-              />
-              <Tooltip 
-                contentStyle={{
-                  backgroundColor: 'rgba(0,0,0,0.95)',
-                  border: '2px solid rgba(167,139,250,0.8)',
-                  borderRadius: '8px',
-                  color: '#a78bfa',
-                  boxShadow: '0 4px 12px rgba(167,139,250,0.3)'
-                }}
-                labelFormatter={(value) => new Date(value).toLocaleDateString()}
-                formatter={(value, name) => [`$${parseFloat(value).toFixed(2)}`, name]}
-              />
-              
-              {/* Main price line */}
-              <Line 
-                type="monotone" 
-                dataKey="value" 
-                stroke="#a78bfa" 
-                dot={(props) => {
-                  const { cx, cy, payload } = props;
-                  
-                  if (!payload.patternPoints || payload.patternPoints.length === 0) return null;
-                  
-                  // This point is a pattern point, render special marker
-                  return payload.patternPoints.map((pp, idx) => (
-                    <g key={idx}>
-                      {/* Outer glow effect */}
-                      <circle cx={cx} cy={cy} r={8} fill="black" fillOpacity={0.3} />
-                      {/* Main point circle */}
-                      <circle cx={cx} cy={cy} r={6} fill={pp.color} stroke="#fff" strokeWidth={2} />
-                      {/* Label with background for better visibility */}
-                      <rect 
-                        x={cx - 10} 
-                        y={cy - 25} 
-                        width={20} 
-                        height={20} 
-                        fill="black" 
-                        fillOpacity={0.7} 
-                        rx={4} 
-                      />
-                      <text 
-                        x={cx} 
-                        y={cy - 12} 
-                        textAnchor="middle" 
-                        fill={pp.color} 
-                        fontWeight="bold" 
-                        fontSize={14}
-                      >
-                        {pp.label}
-                      </text>
-                    </g>
-                  ));
-                }}
-                activeDot={{ stroke: '#ffffff', strokeWidth: 2, r: 6, fill: '#a78bfa' }}
-                strokeWidth={2}
-                name="Price"
-              />
-              
-              {/* Render target points */}
-              {targetPoints.map((target, tIdx) => (
-                <ReferenceLine
-                  key={`target-${tIdx}`}
-                  y={target.value}
-                  stroke={target.color}
-                  strokeDasharray="5 5"
-                  label={{
-                    value: target.label,
-                    position: 'right',
-                    fill: target.color
-                  }}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-        
+      <>
+        <TVPatternChart
+          data={enhancedChartData}
+          title={title}
+          symbol={symbol}
+          height={320}
+          markers={
+            allPatterns.flatMap(pattern => {
+              const color = pattern.color ||
+                (pattern.type?.includes('gartley') ? '#d946ef' :
+                pattern.type?.includes('butterfly') ? '#2dd4bf' :
+                pattern.type?.includes('bat') ? '#fb923c' :
+                pattern.type?.includes('crab') ? '#4ade80' : '#a5b4fc');
+              return ['X','A','B','C','D']
+                .filter(k => pattern.points?.[k] || pattern.points?.[k.toLowerCase()])
+                .map(k => {
+                  const pt = pattern.points?.[k] || pattern.points?.[k.toLowerCase()];
+                  return {
+                    time: pt.date,
+                    label: k,
+                    color,
+                    position: ['X','B','D'].includes(k) ? 'below' : 'above',
+                  };
+                });
+            })
+          }
+          slopeLines={
+            allPatterns.map(pattern => {
+              const color = pattern.color ||
+                (pattern.type?.includes('gartley') ? '#d946ef' :
+                pattern.type?.includes('butterfly') ? '#2dd4bf' :
+                pattern.type?.includes('bat') ? '#fb923c' :
+                pattern.type?.includes('crab') ? '#4ade80' : '#a5b4fc');
+              const pts = ['X','A','B','C','D']
+                .map(k => pattern.points?.[k] || pattern.points?.[k.toLowerCase()])
+                .filter(Boolean)
+                .map(p => ({ date: p.date, value: p.value }));
+              return { points: pts, color, width: 2, dashed: false };
+            }).filter(s => s.points.length >= 2)
+          }
+          priceLines={
+            targetPoints
+              .filter(t => t.value != null && !isNaN(t.value))
+              .sort((a, b) => b.value - a.value)
+              .map(t => ({
+                value: t.value,
+                color: t.color || '#a5b4fc',
+                label: t.label || 'Target',
+                dashed: true,
+              }))
+          }
+        />
         {renderAnalysisSummary()}
-      </div>
+      </>
     );
   };
 

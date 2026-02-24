@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { TrendingUp, TrendingDown, AlertCircle, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
-import { BookOpen, ArrowLeft, LineChart, TrendingUp as TrendingUpIcon, BarChart2, Activity, Triangle } from 'lucide-react';
+import {
+  TrendingUp, TrendingDown, AlertCircle, ChevronDown, ChevronUp,
+  ArrowLeft, LineChart, BarChart2, Activity, Triangle, BookOpen, RefreshCw, Search
+} from 'lucide-react';
+import { TrendingUp as TrendingUpIcon } from 'lucide-react';
 import InvestmentProtocol from './InvestmentProtocol';
 import InvestmentAnalysis from './InvestmentAnalysis';
 import HeadAndShouldersDetector from './HeadAndShouldersDetector';
@@ -11,7 +13,201 @@ import AdvancedPatternDetector from './AdvancedPatternDetector';
 import EnhancedHarmonicPatternDetector from './EnhancedHarmonicPatternDetector';
 import EnhancedClassicPatternDetector from './EnhancedClassicPatternDetector';
 import ChartPatternVisualizer from './ChartPatternVisualizer';
+import AccountMenu from './AccountMenu';
+import SubscriptionGate from './SubscriptionGate';
 
+/* ─── Design tokens (inline — no Tailwind custom classes needed) ─── */
+const C = {
+  bgPrimary:   '#131722',
+  bgSecondary: '#1E222D',
+  bgTertiary:  '#2A2E39',
+  bgElevated:  '#363A45',
+  border:      '#2A2E39',
+  borderLight: '#363A45',
+  accent:      '#2962FF',
+  accentHover: '#1E53E5',
+  accentDim:   'rgba(41,98,255,0.15)',
+  textPrimary: '#D1D4DC',
+  textSecondary:'#787B86',
+  textMuted:   '#4C525E',
+  white:       '#FFFFFF',
+  bull:        '#26A69A',
+  bullDim:     'rgba(38,166,154,0.15)',
+  bear:        '#EF5350',
+  bearDim:     'rgba(239,83,80,0.15)',
+  warn:        '#FF9800',
+};
+
+/* ─── Shared inline style helpers ─── */
+const styles = {
+  card: {
+    backgroundColor: C.bgSecondary,
+    border: `1px solid ${C.border}`,
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
+  cardHeader: {
+    padding: '10px 16px',
+    borderBottom: `1px solid ${C.border}`,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  cardTitle: {
+    fontSize: 11,
+    fontWeight: 600,
+    color: C.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: '0.07em',
+    margin: 0,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: 500,
+    color: C.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    display: 'block',
+    marginBottom: 6,
+  },
+  input: {
+    width: '100%',
+    backgroundColor: C.bgTertiary,
+    border: `1px solid ${C.border}`,
+    borderRadius: 4,
+    padding: '8px 12px',
+    color: C.textPrimary,
+    fontSize: 13,
+    outline: 'none',
+    transition: 'border-color 0.15s ease',
+    WebkitAppearance: 'none',
+    appearance: 'none',
+  },
+  select: {
+    width: '100%',
+    backgroundColor: C.bgTertiary,
+    border: `1px solid ${C.border}`,
+    borderRadius: 4,
+    padding: '8px 12px',
+    color: C.textPrimary,
+    fontSize: 13,
+    outline: 'none',
+    cursor: 'pointer',
+    WebkitAppearance: 'none',
+    appearance: 'none',
+  },
+  btnPrimary: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: C.accent,
+    color: '#fff',
+    border: 'none',
+    borderRadius: 4,
+    padding: '7px 14px',
+    fontSize: 13,
+    fontWeight: 500,
+    cursor: 'pointer',
+    transition: 'background-color 0.15s ease',
+    whiteSpace: 'nowrap',
+    WebkitTapHighlightColor: 'transparent',
+  },
+  btnGhost: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'transparent',
+    color: C.textSecondary,
+    border: `1px solid ${C.border}`,
+    borderRadius: 4,
+    padding: '6px 12px',
+    fontSize: 12,
+    fontWeight: 500,
+    cursor: 'pointer',
+    transition: 'background-color 0.15s ease, color 0.15s ease',
+    whiteSpace: 'nowrap',
+    WebkitTapHighlightColor: 'transparent',
+  },
+  dataRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '9px 16px',
+    borderBottom: `1px solid ${C.border}`,
+    fontSize: 13,
+  },
+};
+
+/* ─── Sub components ─── */
+function SubView({ title, onBack, children }) {
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: C.bgPrimary }}>
+      <div style={{ maxWidth: 1152, margin: '0 auto', padding: '16px 16px' }}>
+        <button
+          onClick={onBack}
+          style={{ ...styles.btnGhost, marginBottom: 16 }}
+        >
+          <ArrowLeft size={14} />
+          Back to Asset Analyzer
+        </button>
+        <div style={{ color: C.textSecondary, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>
+          {title}
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function DataRow({ label, value }) {
+  return (
+    <div style={styles.dataRow}>
+      <span style={{ color: C.textSecondary }}>{label}</span>
+      <span style={{ color: C.textPrimary, fontWeight: 500 }}>{value}</span>
+    </div>
+  );
+}
+
+function SectionCard({ title, isOpen, onToggle, accentColor, children }) {
+  return (
+    <div style={styles.card}>
+      <div
+        onClick={onToggle}
+        role="button"
+        tabIndex={0}
+        onKeyDown={e => e.key === 'Enter' && onToggle()}
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '12px 16px',
+          borderBottom: isOpen ? `1px solid ${C.border}` : 'none',
+          cursor: 'pointer',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+        }}
+      >
+        <span style={{ fontSize: 13, fontWeight: 600, color: accentColor || C.white }}>
+          {title}
+        </span>
+        {isOpen
+          ? <ChevronUp size={15} color={C.textSecondary} />
+          : <ChevronDown size={15} color={C.textSecondary} />
+        }
+      </div>
+      {isOpen && (
+        <div style={{ padding: 16 }} className="tv-fade-in">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Main Display ─── */
 const Display = ({
   assetData,
   assetType,
@@ -33,705 +229,489 @@ const Display = ({
   searchProps,
   historicalData,
   marketData,
-  financialData
+  financialData,
 }) => {
   const [showProtocol, setShowProtocol] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [showPatternAnalysis, setShowPatternAnalysis] = useState(false);
   const [currentPattern, setCurrentPattern] = useState('');
-  
-  // State for collapsible sections
   const [expandedSections, setExpandedSections] = useState({
     headAndShoulders: false,
     advancedPatterns: false,
     harmonicPatterns: false,
-    classicPatterns: false
+    classicPatterns: false,
   });
 
-  // Function to toggle section expansion
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
+  const toggle = (k) => setExpandedSections(p => ({ ...p, [k]: !p[k] }));
 
-  // Handle direct pattern analysis view
-  const handlePatternView = (patternType) => {
-    setCurrentPattern(patternType);
+  const handlePatternView = (type) => {
+    setCurrentPattern(type);
     setShowPatternAnalysis(true);
   };
 
-  // Handle Investment Protocol View
+  const isPositive = assetData.change ? parseFloat(assetData.change) >= 0 : null;
+  const hasData = !!(assetData.price || assetData.overview);
+
+  /* ── Sub-views ── */
   if (showProtocol) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-950">
-        <div className="fixed inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
-        <div className="relative p-6 max-w-6xl mx-auto space-y-8">
-          <Button
-            onClick={() => setShowProtocol(false)}
-            className="mb-4 bg-indigo-600 hover:bg-indigo-700"
-          >
-            <ArrowLeft className="mr-2 h-5 w-5" />
-            Back to Asset Analyzer
-          </Button>
-          <InvestmentProtocol />
-        </div>
-      </div>
+      <SubView title="Investment Protocol" onBack={() => setShowProtocol(false)}>
+        <InvestmentProtocol />
+      </SubView>
     );
   }
 
-  // Handle Investment Analysis View
   if (showAnalysis) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-950">
-        <div className="fixed inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
-        <div className="relative p-6 max-w-6xl mx-auto space-y-8">
-          <Button
-            onClick={() => setShowAnalysis(false)}
-            className="mb-4 bg-indigo-600 hover:bg-indigo-700"
-          >
-            <ArrowLeft className="mr-2 h-5 w-5" />
-            Back to Asset Analyzer
-          </Button>
-          {assetData.symbol && (
-            <InvestmentAnalysis
-              symbol={assetData.symbol}
-              marketData={marketData}
-              historicalData={historicalData?.prices}
-              financialData={financialData}
-            />
-          )}
-        </div>
-      </div>
+      <SubView title="Investment Analysis" onBack={() => setShowAnalysis(false)}>
+        {assetData.symbol && (
+          <InvestmentAnalysis
+            symbol={assetData.symbol}
+            marketData={marketData}
+            historicalData={historicalData?.prices}
+            financialData={financialData}
+          />
+        )}
+      </SubView>
     );
   }
 
-  // Handle Pattern Analysis View
+  const patternMap = {
+    classic:       { label: 'Classic Chart Patterns',    Component: EnhancedClassicPatternDetector, color: C.textPrimary },
+    headShoulders: { label: 'Head & Shoulders Pattern',  Component: HeadAndShouldersDetector,       color: C.textPrimary },
+    advanced:      { label: 'Advanced Pattern Analysis', Component: AdvancedPatternDetector,         color: C.textPrimary },
+    harmonic:      { label: 'Harmonic Pattern Analysis', Component: EnhancedHarmonicPatternDetector, color: C.textPrimary },
+    chartjs:       { label: 'Chart.js Pattern Analysis', Component: ChartPatternVisualizer,          color: C.textPrimary },
+  };
+
   if (showPatternAnalysis) {
+    const entry = patternMap[currentPattern];
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-950">
-        <div className="fixed inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
-        <div className="relative p-6 max-w-6xl mx-auto space-y-8">
-          <Button
-            onClick={() => setShowPatternAnalysis(false)}
-            className="mb-4 bg-indigo-600 hover:bg-indigo-700"
-          >
-            <ArrowLeft className="mr-2 h-5 w-5" />
-            Back to Asset Analyzer
-          </Button>
-          
-          {/* Display the selected pattern component */}
-          {currentPattern === 'classic' && (
-            <div className="bg-white/5 backdrop-blur-lg border-white/10 shadow-xl rounded-xl overflow-hidden">
-              <div className="p-4 border-b border-white/10">
-                <h3 className="text-xl font-bold bg-gradient-to-r from-amber-200 to-orange-300 bg-clip-text text-transparent">Classic Chart Pattern Analysis</h3>
-              </div>
-              <div className="p-4">
-                <EnhancedClassicPatternDetector symbol={assetData.symbol} />
-              </div>
+      <SubView title={entry?.label || 'Pattern Analysis'} onBack={() => setShowPatternAnalysis(false)}>
+        {entry ? (
+          <div style={styles.card}>
+            <div style={{ padding: 16 }}>
+              <entry.Component symbol={assetData.symbol} />
             </div>
-          )}
-          
-          {currentPattern === 'headShoulders' && (
-            <div className="bg-white/5 backdrop-blur-lg border-white/10 shadow-xl rounded-xl overflow-hidden">
-              <div className="p-4 border-b border-white/10">
-                <h3 className="text-xl font-bold bg-gradient-to-r from-teal-200 to-blue-300 bg-clip-text text-transparent">Head and Shoulders Pattern Analysis</h3>
-              </div>
-              <div className="p-4">
-                <HeadAndShouldersDetector symbol={assetData.symbol} />
-              </div>
-            </div>
-          )}
-          
-          {currentPattern === 'advanced' && (
-            <div className="bg-white/5 backdrop-blur-lg border-white/10 shadow-xl rounded-xl overflow-hidden">
-              <div className="p-4 border-b border-white/10">
-                <h3 className="text-xl font-bold bg-gradient-to-r from-blue-200 to-indigo-300 bg-clip-text text-transparent">Advanced Pattern Analysis</h3>
-              </div>
-              <div className="p-4">
-                <AdvancedPatternDetector symbol={assetData.symbol} />
-              </div>
-            </div>
-          )}
-          
-          {currentPattern === 'harmonic' && (
-            <div className="bg-white/5 backdrop-blur-lg border-white/10 shadow-xl rounded-xl overflow-hidden">
-              <div className="p-4 border-b border-white/10">
-                <h3 className="text-xl font-bold bg-gradient-to-r from-purple-200 to-pink-300 bg-clip-text text-transparent">Harmonic Pattern Analysis</h3>
-              </div>
-              <div className="p-4">
-                <EnhancedHarmonicPatternDetector symbol={assetData.symbol} />
-              </div>
-            </div>
-          )}
-
-{currentPattern === 'chartjs' && (
-  <div className="bg-white/5 backdrop-blur-lg border-white/10 shadow-xl rounded-xl overflow-hidden">
-    <div className="p-4 border-b border-white/10">
-      <h3 className="text-xl font-bold bg-gradient-to-r from-green-200 to-emerald-300 bg-clip-text text-transparent">Chart.js Pattern Analysis</h3>
-    </div>
-    <div className="p-4">
-      <ChartPatternVisualizer symbol={assetData.symbol} />
-    </div>
-  </div>
-)}
-          
-          {/* If no specific pattern is selected, show all */}
-          {!currentPattern && (
-            <>
-              {/* Classic Pattern Detection */}
-              <div className="bg-white/5 backdrop-blur-lg border-white/10 shadow-xl rounded-xl overflow-hidden">
-                <div className="p-4 border-b border-white/10">
-                  <h3 className="text-xl font-bold bg-gradient-to-r from-amber-200 to-orange-300 bg-clip-text text-transparent">Classic Chart Pattern Analysis</h3>
-                </div>
-                <div className="p-4">
-                  <EnhancedClassicPatternDetector symbol={assetData.symbol} />
-                </div>
-              </div>
-              
-              {/* Head and Shoulders Pattern Section */}
-              <div className="bg-white/5 backdrop-blur-lg border-white/10 shadow-xl rounded-xl overflow-hidden">
-                <div className="p-4 border-b border-white/10">
-                  <h3 className="text-xl font-bold bg-gradient-to-r from-teal-200 to-blue-300 bg-clip-text text-transparent">Head and Shoulders Pattern Analysis</h3>
-                </div>
-                <div className="p-4">
-                  <HeadAndShouldersDetector symbol={assetData.symbol} />
-                </div>
-              </div>
-              
-              {/* Advanced Pattern Section */}
-              <div className="bg-white/5 backdrop-blur-lg border-white/10 shadow-xl rounded-xl overflow-hidden">
-                <div className="p-4 border-b border-white/10">
-                  <h3 className="text-xl font-bold bg-gradient-to-r from-blue-200 to-indigo-300 bg-clip-text text-transparent">Advanced Pattern Analysis</h3>
-                </div>
-                <div className="p-4">
-                  <AdvancedPatternDetector symbol={assetData.symbol} />
-                </div>
-              </div>
-              
-              {/* Harmonic Pattern Section */}
-              <div className="bg-white/5 backdrop-blur-lg border-white/10 shadow-xl rounded-xl overflow-hidden">
-                <div className="p-4 border-b border-white/10">
-                  <h3 className="text-xl font-bold bg-gradient-to-r from-purple-200 to-pink-300 bg-clip-text text-transparent">Harmonic Pattern Analysis</h3>
-                </div>
-                <div className="p-4">
-                  <EnhancedHarmonicPatternDetector symbol={assetData.symbol} />
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {Object.entries(patternMap).map(([k, { label, Component, color }]) => (
+              <SectionCard key={k} title={label} isOpen={!!expandedSections[k]} onToggle={() => toggle(k)} accentColor={color}>
+                <Component symbol={assetData.symbol} />
+              </SectionCard>
+            ))}
+          </div>
+        )}
+      </SubView>
     );
   }
 
+  /* ── Main view ── */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-950">
-      <div className="fixed inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
-      <div className="relative">
-        <div className="relative p-6 max-w-6xl mx-auto space-y-8">
-          {/* Enhanced Header Section */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="relative">
-              <div className="absolute -inset-1 bg-gradient-to-r from-pink-500/30 via-purple-500/30 to-indigo-500/30 rounded-lg blur-xl opacity-75"></div>
-              <h1 className="relative text-4xl font-bold bg-gradient-to-r from-pink-200 via-purple-200 to-indigo-200 bg-clip-text text-transparent 
-                          drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] mb-2">
-                Asset Analyzer Pro
-              </h1>
+    <div style={{ minHeight: '100vh', backgroundColor: C.bgPrimary }}>
+      <div style={{ maxWidth: 1152, margin: '0 auto', padding: '12px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+        {/* ── HEADER CARD ── */}
+        <div style={styles.card}>
+
+          {/* Top row: title + action buttons */}
+          <div style={{ ...styles.cardHeader, padding: '12px 16px' }}>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.white, lineHeight: 1.2 }}>
+                Compound<span style={{ color: C.accent }}>Pulse</span>
+              </div>
+              <div style={{ fontSize: 11, color: C.textSecondary, marginTop: 2 }}>
+                Stocks · Crypto · Bonds
+              </div>
             </div>
-            
-            {/* Pattern Analysis Buttons - Moved to top left */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              <Button
-                onClick={() => handlePatternView('classic')}
-                className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg"
+
+            {/* Desktop action buttons + AccountMenu */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                onClick={() => setShowAnalysis(true)}
+                disabled={!assetData.symbol}
+                style={{
+                  ...styles.btnGhost,
+                  opacity: assetData.symbol ? 1 : 0.4,
+                  cursor: assetData.symbol ? 'pointer' : 'not-allowed',
+                }}
               >
-                <BarChart2 className="mr-2 h-4 w-4" />
-                Classic Patterns
-              </Button>
-              <Button
-                onClick={() => handlePatternView('headShoulders')}
-                className="bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-600 hover:to-blue-700 text-white shadow-lg"
+                <LineChart size={13} />
+                <span style={{ display: 'none' }} className="sm-show">Analysis</span>
+              </button>
+              <button
+                onClick={() => setShowProtocol(true)}
+                style={styles.btnGhost}
               >
-                <Activity className="mr-2 h-4 w-4" />
-                Head & Shoulders
-              </Button>
-              <Button
-                onClick={() => handlePatternView('advanced')}
-                className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg"
-              >
-                <TrendingUpIcon className="mr-2 h-4 w-4" />
-                Advanced Patterns
-              </Button>
-              <Button
-                onClick={() => handlePatternView('harmonic')}
-                className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white shadow-lg"
-              >
-                <Triangle className="mr-2 h-4 w-4" />
-                Harmonic Patterns
-              </Button>
-              <Button
-  onClick={() => {
-    setCurrentPattern('chartjs');
-    setShowPatternAnalysis(true);
-  }}
-  className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg"
->
-  <LineChart className="mr-2 h-4 w-4" />
-  Chart.js Patterns
-</Button>
+                <BookOpen size={13} />
+                <span style={{ display: 'none' }} className="sm-show">Protocol</span>
+              </button>
+              <AccountMenu />
             </div>
           </div>
 
-          <div className="transition-all duration-300">
-            {/* Navigation Buttons */}
-            <div className="flex justify-end mb-4 gap-4">
-              <Button
-                onClick={() => setShowAnalysis(true)}
-                className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700"
-                disabled={!assetData.symbol}
+          {/* Controls: Asset Type | Symbol | Time Range */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            borderBottom: `1px solid ${C.border}`,
+          }}>
+            {/* Asset Type */}
+            <div style={{ padding: '12px 16px', borderRight: `1px solid ${C.border}` }}>
+              <span style={styles.label}>Asset Type</span>
+              <select
+                value={assetType}
+                onChange={handleAssetTypeChange}
+                style={styles.select}
               >
-                <LineChart className="mr-2 h-5 w-5" />
-                Investment Analysis
-              </Button>
-              <Button
-                onClick={() => setShowProtocol(true)}
-                className="w-full sm:w-auto bg-violet-600 hover:bg-violet-700"
-              >
-                <BookOpen className="mr-2 h-5 w-5" />
-                View Investment Protocol
-              </Button>
+                <option value="stock">Stock</option>
+                <option value="crypto">Cryptocurrency</option>
+                <option value="bond">Bond</option>
+              </select>
             </div>
 
-            {/* Asset Overview Card with Enhanced Glow */}
-            <Card className="bg-white/5 backdrop-blur-lg border-white/10 shadow-xl relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 rounded-lg"></div>
-              <CardHeader className="border-b border-white/10 pb-6 relative z-10">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 
-                                flex items-center justify-center shadow-lg relative overflow-hidden group">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent 
-                                  transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                      <span className="text-2xl font-bold text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-                        {assetData.symbol ? assetData.symbol.charAt(0) : 'A'}
-                      </span>
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold bg-gradient-to-r from-white via-purple-100 to-indigo-100 bg-clip-text text-transparent">
-                        {assetData.symbol || 'Select Asset'}
-                      </h2>
-                      {assetData.overview?.name && (
-                        <p className="text-white/70 font-medium">{assetData.overview.name}</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {assetData.price && (
-                    <div className="flex items-center gap-6 bg-white/5 p-4 rounded-xl backdrop-blur-lg border border-white/10 shadow-lg 
-                                 relative overflow-hidden group">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent 
-                                  transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                      <div className="text-right">
-                        <div className="text-white/70 text-sm font-medium">Current Price</div>
-                        <div className="text-3xl font-bold text-white tracking-tight">
-                          ${parseFloat(assetData.price).toFixed(2)}
-                        </div>
-                      </div>
-                      <div className={`flex items-center gap-2 px-4 py-2 rounded-xl backdrop-blur-sm relative overflow-hidden
-                                    ${parseFloat(assetData.change) >= 0 
-                                      ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' 
-                                      : 'bg-rose-500/10 text-rose-300 border border-rose-500/20'}`}>
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent 
-                                    transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                        {parseFloat(assetData.change) >= 0 ? 
-                          <TrendingUp className="h-5 w-5" /> : 
-                          <TrendingDown className="h-5 w-5" />
-                        }
-                        <span className="font-bold">{assetData.changePercent}%</span>
-                      </div>
-                    </div>
+            {/* Symbol */}
+            <div style={{ padding: '12px 16px', borderRight: `1px solid ${C.border}` }}>
+              <span style={styles.label}>Symbol</span>
+              {renderSearchInput({ ...searchProps })}
+            </div>
+
+            {/* Time Range + Update */}
+            <div style={{ padding: '12px 16px' }}>
+              <span style={styles.label}>Time Range</span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <select
+                  value={timeRange}
+                  onChange={(e) => setTimeRange(e.target.value)}
+                  style={{ ...styles.select, flex: 1 }}
+                >
+                  <option value="7">7 Days</option>
+                  <option value="30">30 Days</option>
+                  <option value="90">90 Days</option>
+                  <option value="180">180 Days</option>
+                  <option value="365">1 Year</option>
+                  <option value="1825">5 Years</option>
+                  <option value="3650">10 Years</option>
+                </select>
+                <button
+                  onClick={handleUpdateChart}
+                  style={{ ...styles.btnPrimary, padding: '8px 12px', flexShrink: 0 }}
+                  title="Refresh"
+                >
+                  <RefreshCw size={13} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Error / Loading strips */}
+          {error && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '9px 16px',
+              backgroundColor: C.bearDim,
+              borderTop: `1px solid rgba(239,83,80,0.25)`,
+              color: C.bear,
+              fontSize: 13,
+            }}>
+              <AlertCircle size={14} style={{ flexShrink: 0 }} />
+              {error}
+            </div>
+          )}
+          {loading && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '9px 16px',
+              backgroundColor: C.accentDim,
+              borderTop: `1px solid rgba(41,98,255,0.25)`,
+              color: C.accent,
+              fontSize: 13,
+            }}>
+              <div className="tv-spinner" />
+              Loading asset data…
+            </div>
+          )}
+        </div>
+
+        {/* ── PATTERN TOOLBAR ── */}
+        <div style={{ ...styles.card, backgroundColor: C.bgPrimary }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '10px 14px', alignItems: 'center' }}>
+            <span style={{ ...styles.label, marginBottom: 0, marginRight: 4 }}>Patterns:</span>
+            {[
+              { key: 'classic',       Icon: BarChart2,      label: 'Classic' },
+              { key: 'headShoulders', Icon: Activity,       label: 'H&S' },
+              { key: 'advanced',      Icon: TrendingUpIcon, label: 'Advanced' },
+              { key: 'harmonic',      Icon: Triangle,       label: 'Harmonic' },
+              { key: 'chartjs',       Icon: LineChart,      label: 'Chart.js' },
+            ].map(({ key, Icon, label }) => (
+              <button
+                key={key}
+                onClick={() => handlePatternView(key)}
+                style={styles.btnGhost}
+              >
+                <Icon size={12} />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── SYMBOL PRICE HEADER ── */}
+        {assetData.price && (
+          <div style={styles.card} className="tv-fade-in">
+            <div style={{ padding: '12px 16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px 24px' }}>
+
+              {/* Symbol icon */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 38, height: 38, borderRadius: '50%',
+                  backgroundColor: C.accentDim,
+                  border: `1px solid ${C.accent}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 14, fontWeight: 700, color: C.accent,
+                  flexShrink: 0,
+                }}>
+                  {assetData.symbol?.charAt(0) || 'A'}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: C.white }}>{assetData.symbol}</div>
+                  {assetData.overview?.name && (
+                    <div style={{ fontSize: 11, color: C.textSecondary }}>{assetData.overview.name}</div>
                   )}
                 </div>
-              </CardHeader>
+              </div>
 
-              <CardContent className="mt-6 relative z-10">
-                <div className="space-y-6 relative">
-                  {/* Controls Grid with Enhanced Buttons */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-white/5 rounded-xl backdrop-blur-lg border border-white/10 relative">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-white/70">Asset Type</label>
-                      <select 
-                        value={assetType} 
-                        onChange={handleAssetTypeChange}
-                        className="w-full p-3 rounded-xl bg-slate-800 border-purple-500/30 text-white 
-                                focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all
-                                shadow-[0_0_10px_rgba(147,51,234,0.2)]"
-                      >
-                        <option value="stock">Stock</option>
-                        <option value="crypto">Cryptocurrency</option>
-                        <option value="bond">Bond</option>
-                      </select>
-                    </div>
+              {/* Price */}
+              <div>
+                <div style={{ fontSize: 11, color: C.textSecondary, marginBottom: 2 }}>Price</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: C.white }}>
+                  ${parseFloat(assetData.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
 
-                    <div className="space-y-2 relative z-10">
-                      {renderSearchInput({...searchProps})}
-                    </div>
+              {/* Change badge */}
+              {assetData.change && (
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '4px 10px',
+                  backgroundColor: isPositive ? C.bullDim : C.bearDim,
+                  color: isPositive ? C.bull : C.bear,
+                  borderRadius: 3,
+                  fontSize: 13, fontWeight: 600,
+                }}>
+                  {isPositive ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
+                  {isPositive ? '+' : ''}{assetData.changePercent}%
+                </div>
+              )}
 
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-white/70">Time Range</label>
-                      <div className="flex gap-3">
-                        <select
-                          value={timeRange}
-                          onChange={(e) => setTimeRange(e.target.value)}
-                          className="flex-1 p-3 rounded-xl bg-slate-800 border-purple-500/30 text-white/90 placeholder-white/30 
-                                  focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all backdrop-blur-lg
-                                  shadow-[0_0_10px_rgba(147,51,234,0.2)]"
-                        >
-                          <option value="7">7 Days</option>
-                          <option value="30">30 Days</option>
-                          <option value="90">90 Days</option>
-                          <option value="180">180 Days</option>
-                          <option value="365">1 Year</option>
-                          <option value="1825">5 Years</option>
-                          <option value="3650">10 Years</option>
-                        </select>
-                        <Button 
-                          onClick={handleUpdateChart}
-                          className="relative px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 border-none text-white rounded-xl 
-                                   shadow-lg hover:shadow-xl 
-                                   transition-all duration-300 hover:from-indigo-700 hover:to-purple-700 overflow-hidden group"
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent 
-                                      transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                          Update
-                        </Button>
-                      </div>
-                    </div>
+              {/* Mobile: full-width action buttons */}
+              <div style={{ display: 'flex', gap: 8, width: '100%', marginTop: 4 }}>
+                <button
+                  onClick={() => setShowAnalysis(true)}
+                  disabled={!assetData.symbol}
+                  style={{
+                    ...styles.btnPrimary,
+                    flex: 1,
+                    fontSize: 12,
+                    padding: '8px 12px',
+                    opacity: assetData.symbol ? 1 : 0.4,
+                  }}
+                >
+                  <LineChart size={13} />
+                  Investment Analysis
+                </button>
+                <button
+                  onClick={() => setShowProtocol(true)}
+                  style={{ ...styles.btnGhost, flex: 1, fontSize: 12, padding: '8px 12px' }}
+                >
+                  <BookOpen size={13} />
+                  Protocol
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── MAIN DATA GRID ── */}
+        {hasData && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
+
+            {/* On xl screens: sidebar + main */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+              {/* Flex row on large screens */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+                {/* Market Data Panel */}
+                <div style={styles.card}>
+                  <div style={styles.cardHeader}>
+                    <span style={styles.cardTitle}>Market Data</span>
                   </div>
+                  <div>
+                    {assetType === 'stock' && (
+                      <>
+                        <DataRow label="Symbol"     value={assetData.symbol} />
+                        <DataRow label="Name"       value={assetData.name || assetData.symbol} />
+                        <DataRow label="Price"      value={`$${parseFloat(assetData.price).toFixed(2)}`} />
+                        <DataRow label="Volume"     value={marketData.volume ? marketData.volume.toLocaleString() : 'N/A'} />
+                        <DataRow label="Avg Volume" value={marketData.avgVolume ? marketData.avgVolume.toLocaleString() : 'N/A'} />
+                      </>
+                    )}
+                    {assetType === 'crypto' && assetData.overview &&
+                      Object.entries(assetData.overview)
+                        .filter(([, v]) => v !== null && v !== undefined)
+                        .map(([key, value]) => {
+                          const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
+                          let formatted = value;
+                          if (typeof value === 'number') {
+                            formatted = /price|value|cap|volume/i.test(key)
+                              ? '$' + value.toLocaleString()
+                              : value.toLocaleString();
+                          }
+                          return <DataRow key={key} label={label} value={formatted} />;
+                        })
+                    }
+                    {assetType === 'bond' && assetData.overview &&
+                      Object.entries(assetData.overview)
+                        .filter(([, v]) => v !== null && v !== undefined)
+                        .map(([key, value]) => (
+                          <DataRow key={key} label={key.replace(/([A-Z])/g, ' $1').trim()} value={value} />
+                        ))
+                    }
+                  </div>
+                </div>
 
-                  {/* Chart Controls with Glowing Buttons */}
-                  <div className="flex justify-end gap-4 items-center p-4 bg-white/5 rounded-xl backdrop-blur-lg border border-white/10">
-                    {assetType === 'bond' && (
-                      <div className="flex-1">
+                {/* Price Chart Card */}
+                <div style={styles.card}>
+                  <div style={styles.cardHeader}>
+                    <span style={styles.cardTitle}>Price Chart</span>
+                    {/* Chart controls */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {assetType === 'bond' && (
                         <select
                           value={yAxisMetric}
                           onChange={(e) => setYAxisMetric(e.target.value)}
-                          className="w-full p-3 rounded-xl bg-slate-800 border-purple-500/30 text-white/90 placeholder-white/30 
-                                  focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all backdrop-blur-lg
-                                  shadow-[0_0_10px_rgba(147,51,234,0.2)]"
+                          style={{ ...styles.select, width: 'auto', fontSize: 11, padding: '4px 24px 4px 8px' }}
                         >
-                          <option value="price">Show Price</option>
-                          <option value="yield">Show Yield</option>
+                          <option value="price">Price</option>
+                          <option value="yield">Yield</option>
                         </select>
+                      )}
+                      {/* Chart type toggle */}
+                      <div style={{
+                        display: 'flex',
+                        backgroundColor: C.bgPrimary,
+                        border: `1px solid ${C.border}`,
+                        borderRadius: 4,
+                        padding: 3,
+                        gap: 2,
+                      }}>
+                        {['line', 'area'].map(type => (
+                          <button
+                            key={type}
+                            onClick={() => setChartType(type)}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: 3,
+                              fontSize: 11,
+                              fontWeight: 500,
+                              border: 'none',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                              backgroundColor: chartType === type ? C.bgElevated : 'transparent',
+                              color: chartType === type ? C.white : C.textSecondary,
+                            }}
+                          >
+                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                          </button>
+                        ))}
                       </div>
-                    )}
-                    <div className="flex gap-2">
-                      <Button
-                        variant={chartType === 'line' ? 'default' : 'outline'}
-                        onClick={() => setChartType('line')}
-                        className={`relative px-6 py-2 rounded-xl overflow-hidden group ${
-                          chartType === 'line' 
-                            ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg hover:shadow-xl' 
-                            : 'border-white/20 text-white/70 hover:bg-white/10'
-                        }`}
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent 
-                                    transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                        Line Chart
-                      </Button>
-                      <Button
-                        variant={chartType === 'area' ? 'default' : 'outline'}
-                        onClick={() => setChartType('area')}
-                        className={`relative px-6 py-2 rounded-xl overflow-hidden group ${
-                          chartType === 'area' 
-                            ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg hover:shadow-xl' 
-                            : 'border-white/20 text-white/70 hover:bg-white/10'
-                        }`}
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent 
-                                    transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                        Area Chart
-                      </Button>
                     </div>
                   </div>
-
-                  {/* Enhanced Alerts */}
-                  {error && (
-                    <div className="flex items-center gap-3 p-4 text-rose-300 bg-rose-500/10 rounded-xl border border-rose-500/20 
-                                backdrop-blur-sm relative overflow-hidden group">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-rose-500/5 to-transparent 
-                                  transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                      <AlertCircle className="h-5 w-5" />
-                      <span className="font-medium">{error}</span>
-                    </div>
-                  )}
-                  
-                  {loading && (
-                    <div className="flex items-center justify-center gap-3 p-4 text-blue-300 bg-blue-500/10 rounded-xl 
-                                border border-blue-500/20 backdrop-blur-sm relative overflow-hidden group">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/5 to-transparent 
-                                  transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-b-transparent border-blue-300"></div>
-                      <span className="font-medium">Loading asset data...</span>
-                    </div>
-                  )}
+                  <div style={{ padding: 16 }}>
+                    {renderChart()}
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Data Display Grid with Enhanced Cards */}
-            {(assetData.price || assetData.overview) && (
-              <div className="grid grid-cols-1 xl:grid-cols-4 gap-6" style={{ zIndex: 1 }}>
-                {/* Market Data Card */}
-                <Card className="xl:col-span-1 bg-white/5 backdrop-blur-lg border-white/10 shadow-xl relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-indigo-500/5 to-purple-500/5 rounded-lg"></div>
-                  <CardHeader className="border-b border-white/10 relative z-10">
-                    <CardTitle className="relative">
-                      <div className="absolute -inset-1 bg-gradient-to-r from-blue-400/20 via-indigo-400/20 to-purple-400/20 rounded-lg blur-xl opacity-75"></div>
-                      <span className="relative text-2xl font-bold bg-gradient-to-r from-blue-200 via-indigo-200 to-purple-200 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
-                        Market Data
-                      </span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0 relative z-10">
-                    <div className="divide-y divide-white/10">
-                      {/* Show stock-specific data */}
-                      {assetType === 'stock' && (
-                        <>
-                          <div className="flex justify-between py-3 px-6 hover:bg-white/5 transition-colors group">
-                            <span className="text-white/60 group-hover:text-white/70 transition-colors">Symbol</span>
-                            <span className="font-medium text-white/90 group-hover:text-white transition-colors">
-                              {assetData.symbol}
-                            </span>
-                          </div>
-                          <div className="flex justify-between py-3 px-6 hover:bg-white/5 transition-colors group">
-                            <span className="text-white/60 group-hover:text-white/70 transition-colors">Name</span>
-                            <span className="font-medium text-white/90 group-hover:text-white transition-colors">
-                              {assetData.name || assetData.symbol}
-                            </span>
-                          </div>
-                          <div className="flex justify-between py-3 px-6 hover:bg-white/5 transition-colors group">
-                            <span className="text-white/60 group-hover:text-white/70 transition-colors">Price</span>
-                            <span className="font-medium text-white/90 group-hover:text-white transition-colors">
-                              ${parseFloat(assetData.price).toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between py-3 px-6 hover:bg-white/5 transition-colors group">
-                            <span className="text-white/60 group-hover:text-white/70 transition-colors">Volume</span>
-                            <span className="font-medium text-white/90 group-hover:text-white transition-colors">
-                              {marketData.volume ? marketData.volume.toLocaleString() : 'N/A'}
-                            </span>
-                          </div>
-                          <div className="flex justify-between py-3 px-6 hover:bg-white/5 transition-colors group">
-                            <span className="text-white/60 group-hover:text-white/70 transition-colors">Avg Volume</span>
-                            <span className="font-medium text-white/90 group-hover:text-white transition-colors">
-                              {marketData.avgVolume ? marketData.avgVolume.toLocaleString() : 'N/A'}
-                            </span>
-                          </div>
-                        </>
-                      )}
-                      
-                      {/* Show crypto-specific data */}
-                      {assetType === 'crypto' && assetData.overview && Object.entries(assetData.overview).map(([key, value]) => {
-                        if (value === null || value === undefined) return null;
-                        
-                        const formattedKey = key.replace(/([A-Z])/g, ' $1')
-                          .split(' ')
-                          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                          .join(' ');
-
-                        let formattedValue = value;
-                        if (typeof value === 'number') {
-                          if (key.toLowerCase().includes('price') || 
-                              key.toLowerCase().includes('value') || 
-                              key.toLowerCase().includes('cap') || 
-                              key.toLowerCase().includes('volume')) {
-                            formattedValue = '$' + value.toLocaleString();
-                          } else {
-                            formattedValue = value.toLocaleString();
-                          }
-                        }
-
-                        return (
-                          <div key={key} className="flex justify-between py-3 px-6 hover:bg-white/5 transition-colors group">
-                            <span className="text-white/60 group-hover:text-white/70 transition-colors">{formattedKey}</span>
-                            <span className="font-medium text-white/90 group-hover:text-white transition-colors">{formattedValue}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Chart and Technical Analysis */}
-                <div className="xl:col-span-3 space-y-6">
-                  <Card className="bg-white/5 backdrop-blur-lg border-white/10 shadow-xl relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-indigo-500/5 to-blue-500/5 rounded-lg"></div>
-                    <CardHeader className="border-b border-white/10 relative z-10">
-                      <CardTitle className="relative">
-                        <div className="absolute -inset-1 bg-gradient-to-r from-purple-400/20 via-indigo-400/20 to-blue-400/20 rounded-lg blur-xl opacity-75"></div>
-                        <span className="relative text-2xl font-bold bg-gradient-to-r from-purple-200 via-indigo-200 to-blue-200 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
-                          Price Chart
-                        </span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6 relative z-10">
-                      <div className="bg-white/5 p-4 rounded-xl backdrop-blur-sm border border-white/10 relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5"></div>
-                        {renderChart()}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-white/5 backdrop-blur-lg border-white/10 shadow-xl relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-indigo-500/5 to-purple-500/5 rounded-lg"></div>
-                    <CardHeader className="border-b border-white/10 relative z-10">
-                      <CardTitle className="relative">
-                        <div className="absolute -inset-1 bg-gradient-to-r from-blue-400/20 via-indigo-400/20 to-purple-400/20 rounded-lg blur-xl opacity-75"></div>
-                        <span className="relative text-2xl font-bold bg-gradient-to-r from-blue-200 via-indigo-200 to-purple-200 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
-                          Technical Analysis
-                        </span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6 relative z-10">
-                      <div className="bg-white/5 p-4 rounded-xl backdrop-blur-sm border border-white/10 relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-indigo-500/5 to-purple-500/5"></div>
-                        {renderTechnicalAnalysis()}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Pattern Analysis Sections (hidden by default) */}
-                  {assetData.symbol && (
-                    <>
-                      {/* Classic Pattern Detection */}
-                      <Card className="bg-white/5 backdrop-blur-lg border-white/10 shadow-xl relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-orange-500/5 to-red-500/5 rounded-lg"></div>
-                        <CardHeader 
-                          className="border-b border-white/10 cursor-pointer relative z-10"
-                          onClick={() => toggleSection('classicPatterns')}
-                        >
-                          <div className="flex justify-between items-center">
-                            <CardTitle className="relative">
-                              <div className="absolute -inset-1 bg-gradient-to-r from-amber-400/20 via-orange-400/20 to-red-400/20 rounded-lg blur-xl opacity-75"></div>
-                              <span className="relative text-2xl font-bold bg-gradient-to-r from-amber-200 via-orange-200 to-red-200 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
-                                Classic Chart Patterns
-                              </span>
-                            </CardTitle>
-                            {expandedSections.classicPatterns ? 
-                              <ChevronUp className="h-5 w-5 text-white/70" /> : 
-                              <ChevronDown className="h-5 w-5 text-white/70" />
-                            }
-                          </div>
-                        </CardHeader>
-                        {expandedSections.classicPatterns && (
-                          <CardContent className="p-6 relative z-10">
-                            <div className="bg-white/5 p-4 rounded-xl backdrop-blur-sm border border-white/10 relative overflow-hidden group">
-                              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-orange-500/5 to-red-500/5"></div>
-                              <EnhancedClassicPatternDetector symbol={assetData.symbol} />
-                            </div>
-                          </CardContent>
-                        )}
-                      </Card>
-
-                      {/* Head and Shoulders Pattern - Collapsible */}
-                      <Card className="bg-white/5 backdrop-blur-lg border-white/10 shadow-xl relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 via-cyan-500/5 to-blue-500/5 rounded-lg"></div>
-                        <CardHeader 
-                          className="border-b border-white/10 cursor-pointer relative z-10"
-                          onClick={() => toggleSection('headAndShoulders')}
-                        >
-                          <div className="flex justify-between items-center">
-                            <CardTitle className="relative">
-                              <div className="absolute -inset-1 bg-gradient-to-r from-teal-400/20 via-cyan-400/20 to-blue-400/20 rounded-lg blur-xl opacity-75"></div>
-                              <span className="relative text-2xl font-bold bg-gradient-to-r from-teal-200 via-cyan-200 to-blue-200 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
-                                Head & Shoulders Pattern
-                              </span>
-                            </CardTitle>
-                            {expandedSections.headAndShoulders ? 
-                              <ChevronUp className="h-5 w-5 text-white/70" /> : 
-                              <ChevronDown className="h-5 w-5 text-white/70" />
-                            }
-                          </div>
-                        </CardHeader>
-                        {expandedSections.headAndShoulders && (
-                          <CardContent className="p-6 relative z-10">
-                            <div className="bg-white/5 p-4 rounded-xl backdrop-blur-sm border border-white/10 relative overflow-hidden group">
-                              <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 via-cyan-500/5 to-blue-500/5"></div>
-                              <HeadAndShouldersDetector symbol={assetData.symbol} />
-                            </div>
-                          </CardContent>
-                        )}
-                      </Card>
-
-                      {/* Advanced Pattern Detection - Collapsible */}
-                      <Card className="bg-white/5 backdrop-blur-lg border-white/10 shadow-xl relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-indigo-500/5 to-violet-500/5 rounded-lg"></div>
-                        <CardHeader 
-                          className="border-b border-white/10 cursor-pointer relative z-10"
-                          onClick={() => toggleSection('advancedPatterns')}
-                        >
-                          <div className="flex justify-between items-center">
-                            <CardTitle className="relative">
-                              <div className="absolute -inset-1 bg-gradient-to-r from-blue-400/20 via-indigo-400/20 to-violet-400/20 rounded-lg blur-xl opacity-75"></div>
-                              <span className="relative text-2xl font-bold bg-gradient-to-r from-blue-200 via-indigo-200 to-violet-200 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
-                                Advanced Pattern Analysis
-                              </span>
-                            </CardTitle>
-                            {expandedSections.advancedPatterns ? 
-                              <ChevronUp className="h-5 w-5 text-white/70" /> : 
-                              <ChevronDown className="h-5 w-5 text-white/70" />
-                            }
-                          </div>
-                        </CardHeader>
-                        {expandedSections.advancedPatterns && (
-                          <CardContent className="p-6 relative z-10">
-                            <div className="bg-white/5 p-4 rounded-xl backdrop-blur-sm border border-white/10 relative overflow-hidden group">
-                              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-indigo-500/5 to-violet-500/5"></div>
-                              <AdvancedPatternDetector symbol={assetData.symbol} />
-                            </div>
-                          </CardContent>
-                        )}
-                      </Card>
-                      
-                      {/* Harmonic Pattern Detection - Collapsible */}
-                      <Card className="bg-white/5 backdrop-blur-lg border-white/10 shadow-xl relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-pink-500/5 to-rose-500/5 rounded-lg"></div>
-                        <CardHeader 
-                          className="border-b border-white/10 cursor-pointer relative z-10"
-                          onClick={() => toggleSection('harmonicPatterns')}
-                        >
-                          <div className="flex justify-between items-center">
-                            <CardTitle className="relative">
-                              <div className="absolute -inset-1 bg-gradient-to-r from-purple-400/20 via-pink-400/20 to-rose-400/20 rounded-lg blur-xl opacity-75"></div>
-                              <span className="relative text-2xl font-bold bg-gradient-to-r from-purple-200 via-pink-200 to-rose-200 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
-                                Harmonic Pattern Analysis
-                              </span>
-                            </CardTitle>
-                            {expandedSections.harmonicPatterns ? 
-                              <ChevronUp className="h-5 w-5 text-white/70" /> : 
-                              <ChevronDown className="h-5 w-5 text-white/70" />
-                            }
-                          </div>
-                        </CardHeader>
-                        {expandedSections.harmonicPatterns && (
-                          <CardContent className="p-6 relative z-10">
-                            <div className="bg-white/5 p-4 rounded-xl backdrop-blur-sm border border-white/10 relative overflow-hidden group">
-                              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-pink-500/5 to-rose-500/5"></div>
-                              <EnhancedHarmonicPatternDetector symbol={assetData.symbol} />
-                            </div>
-                          </CardContent>
-                        )}
-                      </Card>
-                    </>
-                  )}
+                {/* Technical Analysis Card */}
+                <div style={styles.card}>
+                  <div style={styles.cardHeader}>
+                    <span style={styles.cardTitle}>Technical Analysis</span>
+                  </div>
+                  <div style={{ padding: 16 }}>
+                    {renderTechnicalAnalysis()}
+                  </div>
                 </div>
+
+                {/* Collapsible Pattern Sections */}
+                {assetData.symbol && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <SectionCard
+                      title="Classic Chart Patterns"
+                      isOpen={expandedSections.classicPatterns}
+                      onToggle={() => toggle('classicPatterns')}
+                      accentColor={C.textPrimary}
+                    >
+                      <SubscriptionGate featureName="Classic Chart Patterns">
+                        <EnhancedClassicPatternDetector symbol={assetData.symbol} />
+                      </SubscriptionGate>
+                    </SectionCard>
+
+                    <SectionCard
+                      title="Head & Shoulders Pattern"
+                      isOpen={expandedSections.headAndShoulders}
+                      onToggle={() => toggle('headAndShoulders')}
+                      accentColor={C.textPrimary}
+                    >
+                      <SubscriptionGate featureName="Head & Shoulders Pattern">
+                        <HeadAndShouldersDetector symbol={assetData.symbol} />
+                      </SubscriptionGate>
+                    </SectionCard>
+
+                    <SectionCard
+                      title="Advanced Pattern Analysis"
+                      isOpen={expandedSections.advancedPatterns}
+                      onToggle={() => toggle('advancedPatterns')}
+                      accentColor={C.textPrimary}
+                    >
+                      <SubscriptionGate featureName="Advanced Pattern Analysis">
+                        <AdvancedPatternDetector symbol={assetData.symbol} />
+                      </SubscriptionGate>
+                    </SectionCard>
+
+                    <SectionCard
+                      title="Harmonic Pattern Analysis"
+                      isOpen={expandedSections.harmonicPatterns}
+                      onToggle={() => toggle('harmonicPatterns')}
+                      accentColor={C.textPrimary}
+                    >
+                      <SubscriptionGate featureName="Harmonic Pattern Analysis">
+                        <EnhancedHarmonicPatternDetector symbol={assetData.symbol} />
+                      </SubscriptionGate>
+                    </SectionCard>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* ── EMPTY STATE ── */}
+        {!hasData && !loading && (
+          <div style={{ ...styles.card, padding: '60px 16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center' }}>
+              <Search size={36} color={C.textMuted} />
+              <div style={{ fontWeight: 600, fontSize: 15, color: C.textPrimary }}>
+                Search for an asset to get started
+              </div>
+              <div style={{ fontSize: 13, color: C.textSecondary }}>
+                Enter a stock symbol, crypto ticker, or select a bond above
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

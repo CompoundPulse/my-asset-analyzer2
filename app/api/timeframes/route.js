@@ -1,6 +1,6 @@
 // app/api/timeframes/route.js
 import { NextResponse } from 'next/server';
-import { fetchMultiTimeframeData } from '../../stockUtils';
+import { fetchMultiTimeframeData } from '../../../components/stockUtils';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);

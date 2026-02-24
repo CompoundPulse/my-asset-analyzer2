@@ -1,4 +1,5 @@
 import React, { useState, BookOpen, useCallback, useMemo, useEffect } from 'react';
+import TVChart from './TVChart';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -262,95 +263,21 @@ const AssetAnalyzer = () => {
     }, [assetType, timeRange, fetchCryptoData, handleBondFetch]); // Add other dependencies if needed
 
     const renderChart = () => {
-        console.log('Historical Data in renderChart:', historicalData);
-        console.log('Historical Prices:', historicalData?.prices);
-
-        // Added defensive check for valid data
         if (!historicalData?.prices || !Array.isArray(historicalData.prices) || historicalData.prices.length === 0) {
-            console.log('No data to display - check failed at:', {
-                exists: !!historicalData?.prices,
-                isArray: Array.isArray(historicalData?.prices),
-                length: historicalData?.prices?.length
-            });
-            return <div className="text-gray-500">No data to display.</div>;
+            return (
+                <div style={{ height: 380, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4C525E', fontSize: 13 }}>
+                    No data to display. Search for an asset above.
+                </div>
+            );
         }
-        // Added defensive check for valid data
-        if (!historicalData?.prices || !Array.isArray(historicalData.prices) || historicalData.prices.length === 0) {
-            return <div className="text-gray-500">No data to display.</div>; // Display a message when there is no data.
-        }
-
-        const ChartComponent = chartType === 'line' ? LineChart : AreaChart;
-        const DataComponent = chartType === 'line' ? Line : Area;
-
-        const yAxisLabel = assetType === 'bond' && yAxisMetric === 'yield' ? 'Yield (%)' : 'Price ($)';
-        const dataKey = yAxisMetric === 'yield' && assetData.overview?.yieldToMaturity ? 'yield' : 'value';
-
-        // Added mapping and filtering to ensure data validity
-        const validData = historicalData.prices.map(point => ({
-            date: point.date || '', // Ensure date exists
-            value: parseFloat(point.value || 0), // Ensure value is a number
-            yield: parseFloat(point.yield || 0) // Ensure yield is a number
-        })).filter(point => point.date && !isNaN(point.value));
-
         return (
-            <div className="mt-8" style={{ width: '100%', height: 400 }}>
-                <ResponsiveContainer>
-                    <ChartComponent data={validData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis
-                            dataKey="date"
-                            angle={-45}
-                            textAnchor="end"
-                            height={80}  // Increased from 60
-                            interval="preserveStartEnd"
-                            tick={{ fill: 'rgba(255, 255, 255, 0.8)', fontSize: 19 }}
-                            stroke="rgba(255, 255, 255, 0.1)"
-                            label={{
-                                value: "Date",
-                                position: 'bottom',
-                                offset: 18,  // Increased offset to move label down
-                                style: { fill: 'rgba(255, 255, 255, 0.8)', fontSize: 16 }
-                            }}
-                        />
-                        <YAxis
-                            domain={['auto', 'auto']}
-                            tickFormatter={(value) => assetType === 'bond' && yAxisMetric === 'yield'
-                                ? `${value.toFixed(2)}%`
-                                : `$${value.toFixed(2)}`
-                            }
-                            tick={{ fill: 'rgba(255, 255, 255, 0.8)', fontSize: 19 }}
-                            stroke="rgba(255, 255, 255, 0.1)"
-                            width={100}  // Give more space for the larger numbers
-                            label={{
-                                value: yAxisLabel,
-                                angle: -90,
-                                position: 'insideLeft',
-                                offset: 0,  // Move label further left
-                                style: { fill: 'rgba(255, 255, 255, 0.8)', fontSize: 16 }
-                            }}
-                        />
-                        <Tooltip
-                            formatter={(value) => [
-                                assetType === 'bond' && yAxisMetric === 'yield'
-                                    ? `${parseFloat(value).toFixed(2)}%`
-                                    : `$${parseFloat(value).toFixed(2)}`,
-                                yAxisMetric === 'yield' ? 'Yield' : 'Price'
-                            ]}
-                            labelFormatter={(label) => `Date: ${label}`}
-                        />
-                        <Legend />
-                        <DataComponent
-                            type="monotone"
-                            dataKey={dataKey}
-                            stroke="rgb(68, 255, 147)"  // Neon green
-                            strokeWidth={2}
-                            fill={chartType === 'area' ? 'rgba(68, 255, 147, 0.1)' : undefined}
-                            dot={false}
-                            name={yAxisMetric === 'yield' ? 'Yield' : 'Price'}
-                        />
-                    </ChartComponent>
-                </ResponsiveContainer>
-            </div>
+            <TVChart
+                data={historicalData.prices}
+                type={chartType}
+                assetType={assetType}
+                yAxisMetric={yAxisMetric}
+                height={380}
+            />
         );
     };
 

@@ -1,26 +1,24 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-
-const inter = Inter({ 
-  subsets: ["latin"] 
-});
+import type { Metadata } from 'next'
+import './globals.css'
+import { AuthProvider } from './hooks/useAuth'
 
 export const metadata: Metadata = {
-  title: "Asset Analyzer",
-  description: "Financial asset analysis tool",
-};
+  title: 'CompoundPulse',
+  description: 'Professional chart pattern detection for serious traders',
+}
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.className} antialiased`}>
-        {children}
+      <body>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
-  );
+  )
 }

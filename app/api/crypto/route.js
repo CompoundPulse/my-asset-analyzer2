@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 
-export async function GET(request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const symbol = searchParams.get('symbol');
-    const timeRange = searchParams.get('timeRange') || '90';
-    const type = searchParams.get('type') || 'ticker';
+export const dynamic = 'force-dynamic';
 
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const symbol = searchParams.get('symbol');
+  const timeRange = searchParams.get('timeRange') || '90';
+  const type = searchParams.get('type') || 'ticker';
+
+  try {
     if (!symbol) {
       return NextResponse.json({ error: 'Symbol is required' }, { status: 400 });
     }
@@ -14,7 +16,6 @@ export async function GET(request) {
     const kucoinSymbol = `${symbol.toUpperCase()}-USDT`;
 
     if (type === 'ticker') {
-      // Get both ticker and stats data
       const [tickerRes, statsRes] = await Promise.all([
         fetch(`https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=${kucoinSymbol}`),
         fetch(`https://api.kucoin.com/api/v1/market/stats?symbol=${kucoinSymbol}`)
@@ -36,7 +37,6 @@ export async function GET(request) {
         stats: statsData.data
       });
     } else {
-      // Get historical kline data
       const endAt = Math.floor(Date.now() / 1000);
       const startAt = endAt - (parseInt(timeRange) * 24 * 60 * 60);
       
@@ -57,8 +57,8 @@ export async function GET(request) {
     return NextResponse.json({ 
       error: 'Failed to fetch crypto data',
       details: error.message,
-      symbol: searchParams.get('symbol'),
-      type: searchParams.get('type')
+      symbol: symbol,
+      type: type
     }, { status: 500 });
   }
 }
